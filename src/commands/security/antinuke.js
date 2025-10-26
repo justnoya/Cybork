@@ -133,11 +133,11 @@ module.exports = {
       const action = args[1]?.toLowerCase();
       if (action === "add") {
         const user = message.mentions.users.first() || await message.client.users.fetch(args[2]).catch(() => null);
-        if (!user) return message.safeReply(ContainerBuilder.error("No User", "Please mention a user or provide their ID", 0xFF0000));
+        if (!user) return message.safeReply(ContainerBuilder.error("No User", "Please mention a user or provide their ID", 0xFFFFFF));
         return addWhitelist(message, settings, user);
       } else if (action === "remove") {
         const user = message.mentions.users.first() || await message.client.users.fetch(args[2]).catch(() => null);
-        if (!user) return message.safeReply(ContainerBuilder.error("No User", "Please mention a user or provide their ID", 0xFF0000));
+        if (!user) return message.safeReply(ContainerBuilder.error("No User", "Please mention a user or provide their ID", 0xFFFFFF));
         return removeWhitelist(message, settings, user);
       } else if (action === "show" || action === "list") {
         return showWhitelist(message, settings);
@@ -199,7 +199,7 @@ module.exports = {
     if (subcommand === "disable") {
       if (!settings.antinuke?.enabled) {
         return interaction.editReply(
-          ContainerBuilder.info("Already Disabled", "Antinuke protection is not currently active", 0xFFA500)
+          ContainerBuilder.info("Already Disabled", "Antinuke protection is not currently active", 0xFFFFFF)
         );
       }
 
@@ -247,7 +247,7 @@ module.exports = {
         const whitelist = settings.antinuke.whitelist || [];
         if (whitelist.length === 0) {
           return interaction.editReply(
-            ContainerBuilder.info("Whitelist Empty", "No users are currently whitelisted.", 0xFFA500)
+            ContainerBuilder.info("Whitelist Empty", "No users are currently whitelisted.", 0xFFFFFF)
           );
         }
 
@@ -272,7 +272,7 @@ module.exports = {
           components: [
             {
               type: 17,
-              accent_color: 0x00FF00,
+              accent_color: 0xFFFFFF,
               components: components
             }
           ]
@@ -281,7 +281,7 @@ module.exports = {
 
       if (!user) {
         return interaction.editReply(
-          ContainerBuilder.error("Missing User", "Please specify a user to add/remove.", 0xFF0000)
+          ContainerBuilder.error("Missing User", "Please specify a user to add/remove.", 0xFFFFFF)
         );
       }
 
@@ -290,7 +290,7 @@ module.exports = {
         
         if (settings.antinuke.whitelist.includes(user.id)) {
           return interaction.editReply(
-            ContainerBuilder.error("Already Whitelisted", `${user.tag} is already on the whitelist.`, 0xFF0000)
+            ContainerBuilder.error("Already Whitelisted", `${user.tag} is already on the whitelist.`, 0xFFFFFF)
           );
         }
 
@@ -309,7 +309,7 @@ module.exports = {
       if (action === "remove") {
         if (!settings.antinuke.whitelist?.includes(user.id)) {
           return interaction.editReply(
-            ContainerBuilder.error("Not Whitelisted", `${user.tag} is not on the whitelist.`, 0xFF0000)
+            ContainerBuilder.error("Not Whitelisted", `${user.tag} is not on the whitelist.`, 0xFFFFFF)
           );
         }
 
@@ -356,7 +356,7 @@ async function enableAntinuke(message, settings) {
 async function disableAntinuke(message, settings) {
   if (!settings.antinuke?.enabled) {
     return message.safeReply(
-      ContainerBuilder.info("Already Disabled", "Antinuke protection is not currently active", 0xFFA500)
+      ContainerBuilder.info("Already Disabled", "Antinuke protection is not currently active", 0xFFFFFF)
     );
   }
 
@@ -392,7 +392,7 @@ async function addWhitelist(message, settings, user) {
   
   if (settings.antinuke.whitelist.includes(user.id)) {
     return message.safeReply(
-      ContainerBuilder.error("Already Whitelisted", `**${user.tag}** is already on the whitelist`, 0xFF0000)
+      ContainerBuilder.error("Already Whitelisted", `**${user.tag}** is already on the whitelist`, 0xFFFFFF)
     );
   }
 
@@ -411,7 +411,7 @@ async function addWhitelist(message, settings, user) {
 async function removeWhitelist(message, settings, user) {
   if (!settings.antinuke?.whitelist?.includes(user.id)) {
     return message.safeReply(
-      ContainerBuilder.error("Not Whitelisted", `**${user.tag}** is not on the whitelist`, 0xFF0000)
+      ContainerBuilder.error("Not Whitelisted", `**${user.tag}** is not on the whitelist`, 0xFFFFFF)
     );
   }
 
@@ -432,7 +432,7 @@ async function showWhitelist(message, settings) {
   
   if (whitelist.length === 0) {
     return message.safeReply(
-      ContainerBuilder.info("Whitelist Empty", "No users are currently whitelisted", 0xFFA500)
+      ContainerBuilder.info("Whitelist Empty", "No users are currently whitelisted", 0xFFFFFF)
     );
   }
 
@@ -457,7 +457,7 @@ async function showWhitelist(message, settings) {
     components: [
       {
         type: 17,
-        accent_color: 0x00FF00,
+        accent_color: 0xFFFFFF,
         components: components
       }
     ]
@@ -513,7 +513,7 @@ async function getStatusDisplay(guild) {
     components: [
       {
         type: 17,
-        accent_color: antinuke.enabled ? 0x00FF00 : 0xFF0000,
+        accent_color: 0xFFFFFF,
         components: components
       }
     ]
