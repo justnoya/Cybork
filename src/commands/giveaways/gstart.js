@@ -11,6 +11,7 @@ const InteractionUtils = require("@helpers/InteractionUtils");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 const { getSettings } = require("@schemas/Guild");
 const { EMBED_COLORS, GIVEAWAYS } = require("@root/config");
+const { getEmoji } = require("@helpers/EmojiUtils");
 
 /**
  * @type {import("@structures/Command")}

@@ -1,6 +1,8 @@
 const { ApplicationCommandOptionType, ComponentType, ButtonStyle, TextInputStyle } = require("discord.js");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 const InteractionUtils = require("@helpers/InteractionUtils");
+const emojis = require("@root/emojis.json");
+const { getEmoji } = require("@helpers/EmojiUtils");
 
 /**
  * @type {import("@structures/Command")}
@@ -79,13 +81,13 @@ async function showAutorolePanel(source, isInteraction, settings) {
       customId: "autorole_humans",
       label: "Human Roles",
       emoji: "👥",
-      style: ButtonStyle.Primary,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "autorole_bots",
       label: "Bot Roles",
       emoji: "🤖",
-      style: ButtonStyle.Primary,
+      style: ButtonStyle.Secondary,
     },
   ]);
   
@@ -94,14 +96,14 @@ async function showAutorolePanel(source, isInteraction, settings) {
       customId: "autorole_reset",
       label: "Reset All",
       emoji: "🔄",
-      style: ButtonStyle.Danger,
+      style: ButtonStyle.Secondary,
       disabled: humanRoles.length === 0 && botRoles.length === 0,
     },
   ]);
   
   const payload = new ContainerBuilder()
     .addContainer({
-      accentColor: 0x5865F2,
+      accentColor: 0xFFFFFF,
       components: components
     })
     .build();
@@ -142,7 +144,7 @@ function setupCollector(message, source, isInteraction, settings) {
     } catch (error) {
       console.error("Autorole panel error:", error);
       await interaction.reply({
-        content: `❌ An error occurred: ${error.message}`,
+        content: `${getEmoji("error")} An error occurred: ${error.message}`,
         ephemeral: true,
       }).catch(() => {});
     }
@@ -184,19 +186,19 @@ async function handleHumanRoles(interaction, source, isInteraction, settings) {
       customId: "human_role_add",
       label: "Add Role",
       emoji: "➕",
-      style: ButtonStyle.Success,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "human_role_remove",
       label: "Remove Role",
       emoji: "➖",
-      style: ButtonStyle.Danger,
+      style: ButtonStyle.Secondary,
       disabled: humanRoles.length === 0,
     },
   ]);
   
   const payload = new ContainerBuilder()
-    .addContainer({ accentColor: 0x5865F2, components: components })
+    .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
   payload.components.push(buttonRow);
@@ -264,7 +266,7 @@ async function handleHumanRoles(interaction, source, isInteraction, settings) {
     
     await modalSubmit.reply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Human Role Added\n\n${role} will now be assigned to new members`
+        `${emojis.success} Human Role Added\n\n${role} will now be assigned to new members`
       )],
       ephemeral: true
     });
@@ -300,7 +302,7 @@ async function handleHumanRoles(interaction, source, isInteraction, settings) {
     
     await modalSubmit.reply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Role Removed\n\n<@&${roleId}> will no longer be assigned to new members`
+        `${emojis.success} Role Removed\n\n<@&${roleId}> will no longer be assigned to new members`
       )],
       ephemeral: true
     });
@@ -336,19 +338,19 @@ async function handleBotRoles(interaction, source, isInteraction, settings) {
       customId: "bot_role_add",
       label: "Add Role",
       emoji: "➕",
-      style: ButtonStyle.Success,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "bot_role_remove",
       label: "Remove Role",
       emoji: "➖",
-      style: ButtonStyle.Danger,
+      style: ButtonStyle.Secondary,
       disabled: botRoles.length === 0,
     },
   ]);
   
   const payload = new ContainerBuilder()
-    .addContainer({ accentColor: 0x5865F2, components: components })
+    .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
   payload.components.push(buttonRow);
@@ -416,7 +418,7 @@ async function handleBotRoles(interaction, source, isInteraction, settings) {
     
     await modalSubmit.reply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Bot Role Added\n\n${role} will now be assigned to new bots`
+        `${emojis.success} Bot Role Added\n\n${role} will now be assigned to new bots`
       )],
       ephemeral: true
     });
@@ -452,7 +454,7 @@ async function handleBotRoles(interaction, source, isInteraction, settings) {
     
     await modalSubmit.reply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Role Removed\n\n<@&${roleId}> will no longer be assigned to new bots`
+        `${emojis.success} Role Removed\n\n<@&${roleId}> will no longer be assigned to new bots`
       )],
       ephemeral: true
     });
@@ -479,7 +481,7 @@ async function handleReset(interaction, settings) {
   
   await interaction.reply({
     embeds: [InteractionUtils.createSuccessEmbed(
-      `✅ Autoroles Reset\n\nAll ${totalRoles} autorole(s) have been removed`
+      `${emojis.success} Autoroles Reset\n\nAll ${totalRoles} autorole(s) have been removed`
     )],
     ephemeral: true
   });

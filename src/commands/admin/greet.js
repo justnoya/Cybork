@@ -2,6 +2,8 @@ const { ApplicationCommandOptionType, ChannelType, ComponentType, ButtonStyle, T
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 const InteractionUtils = require("@helpers/InteractionUtils");
 const { buildGreeting } = require("@handlers/greeting");
+const emojis = require("@root/emojis.json");
+const { getEmoji, statusEmoji } = require("@helpers/EmojiUtils");
 
 /**
  * @type {import("@structures/Command")}
@@ -48,8 +50,6 @@ async function showGreetingPanel(source, isInteraction, settings) {
   
   components.push(ContainerBuilder.createSeparator());
   
-  const statusEmoji = (value) => value ? "<:success:1424072640829722745>" : "<:error:1424072711671382076>";
-  
   // Status
   const isEnabled = welcome.enabled && welcome.channels?.length > 0;
   const status = isEnabled ? `${statusEmoji(true)} **Active**` : `${statusEmoji(false)} Disabled`;
@@ -84,19 +84,19 @@ async function showGreetingPanel(source, isInteraction, settings) {
       customId: "greet_channels",
       label: "Manage Channels",
       emoji: "📺",
-      style: ButtonStyle.Primary,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "greet_message",
       label: "Set Message",
       emoji: "✏️",
-      style: ButtonStyle.Primary,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "greet_embed",
       label: "Embed Settings",
       emoji: "📋",
-      style: ButtonStyle.Primary,
+      style: ButtonStyle.Secondary,
     },
   ]);
   
@@ -111,7 +111,7 @@ async function showGreetingPanel(source, isInteraction, settings) {
       customId: "greet_test",
       label: "Test Greeting",
       emoji: "🧪",
-      style: ButtonStyle.Success,
+      style: ButtonStyle.Secondary,
       disabled: !isEnabled,
     },
     {
@@ -124,7 +124,7 @@ async function showGreetingPanel(source, isInteraction, settings) {
   
   const payload = new ContainerBuilder()
     .addContainer({
-      accentColor: 0x5865F2,
+      accentColor: 0xFFFFFF,
       components: components
     })
     .build();
@@ -176,7 +176,7 @@ function setupCollector(message, source, isInteraction, settings) {
     } catch (error) {
       console.error("Greet panel error:", error);
       await interaction.reply({
-        content: `❌ An error occurred: ${error.message}`,
+        content: `${getEmoji("error")} An error occurred: ${error.message}`,
         ephemeral: true,
       }).catch(() => {});
     }
@@ -214,19 +214,19 @@ async function handleChannels(interaction, source, isInteraction, settings) {
       customId: "greet_channel_add",
       label: "Add Channel",
       emoji: "➕",
-      style: ButtonStyle.Success,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "greet_channel_remove",
       label: "Remove Channel",
       emoji: "➖",
-      style: ButtonStyle.Danger,
+      style: ButtonStyle.Secondary,
       disabled: channels.length === 0,
     },
   ]);
   
   const payload = new ContainerBuilder()
-    .addContainer({ accentColor: 0x5865F2, components: components })
+    .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
   payload.components.push(buttonRow);
@@ -293,7 +293,7 @@ async function handleChannels(interaction, source, isInteraction, settings) {
     
     await modalSubmit.reply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Greeting Channel Added\n\n${channel} will now receive welcome messages`
+        `${getEmoji("success")} Greeting Channel Added\n\n${channel} will now receive welcome messages`
       )],
       ephemeral: true
     });
@@ -329,7 +329,7 @@ async function handleChannels(interaction, source, isInteraction, settings) {
     
     await modalSubmit.reply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Channel Removed\n\n<#${channelId}> will no longer receive greetings`
+        `${getEmoji("success")} Channel Removed\n\n<#${channelId}> will no longer receive greetings`
       )],
       ephemeral: true
     });
@@ -376,7 +376,7 @@ async function handleMessage(interaction, settings) {
   
   await modalSubmit.reply({
     embeds: [InteractionUtils.createSuccessEmbed(
-      `✅ Message Updated\n\nPreview: ${message.substring(0, 150)}${message.length > 150 ? '...' : ''}`
+      `${emojis.success} Message Updated\n\nPreview: ${message.substring(0, 150)}${message.length > 150 ? '...' : ''}`
     )],
     ephemeral: true
   });
@@ -392,7 +392,7 @@ async function handleEmbedSettings(interaction, settings) {
   components.push(ContainerBuilder.createTextDisplay("## 📋 Embed Mode Settings"));
   components.push(ContainerBuilder.createSeparator());
   components.push(ContainerBuilder.createTextDisplay(
-    `**Current Mode:** ${currentEnabled ? '<:success:1424072640829722745> Embed' : '<:error:1424072711671382076> Plain Text'}\n\n` +
+    `**Current Mode:** ${statusEmoji(currentEnabled)} ${currentEnabled ? 'Embed' : 'Plain Text'}\n\n` +
     `Embed mode shows greetings in a styled embed format instead of plain text.`
   ));
   
@@ -401,12 +401,12 @@ async function handleEmbedSettings(interaction, settings) {
       customId: `embed_toggle_${!currentEnabled}`,
       label: currentEnabled ? "Disable Embed" : "Enable Embed",
       emoji: currentEnabled ? "📄" : "📋",
-      style: currentEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
+      style: ButtonStyle.Secondary,
     },
   ]);
   
   const payload = new ContainerBuilder()
-    .addContainer({ accentColor: 0x5865F2, components: components })
+    .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
   payload.components.push(toggleButton);
@@ -443,7 +443,7 @@ async function handleEmbedSettings(interaction, settings) {
   
   await response.update({
     embeds: [InteractionUtils.createSuccessEmbed(
-      `✅ Embed Mode ${newEnabled ? 'Enabled' : 'Disabled'}\n\nGreetings will now use ${newEnabled ? 'embed' : 'plain text'} format`
+      `${getEmoji("success")} Embed Mode ${newEnabled ? 'Enabled' : 'Disabled'}\n\nGreetings will now use ${newEnabled ? 'embed' : 'plain text'} format`
     )],
     components: []
   });
@@ -460,7 +460,7 @@ async function handleAutoDelete(interaction, settings) {
   components.push(ContainerBuilder.createTextDisplay("## 🗑️ Auto-Delete Settings"));
   components.push(ContainerBuilder.createSeparator());
   components.push(ContainerBuilder.createTextDisplay(
-    `**Status:** ${currentEnabled ? '<:success:1424072640829722745> Enabled' : '<:error:1424072711671382076> Disabled'}\n` +
+    `**Status:** ${statusEmoji(currentEnabled)} ${currentEnabled ? 'Enabled' : 'Disabled'}\n` +
     `**Delay:** ${currentDelay} seconds\n\n` +
     `Auto-delete removes greeting messages after a delay to keep channels clean.`
   ));
@@ -470,19 +470,19 @@ async function handleAutoDelete(interaction, settings) {
       customId: `autodel_toggle_${!currentEnabled}`,
       label: currentEnabled ? "Disable" : "Enable",
       emoji: currentEnabled ? "🔴" : "🟢",
-      style: currentEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "autodel_config",
       label: "Set Delay",
       emoji: "⏱️",
-      style: ButtonStyle.Primary,
+      style: ButtonStyle.Secondary,
       disabled: !currentEnabled,
     },
   ]);
   
   const payload = new ContainerBuilder()
-    .addContainer({ accentColor: 0x5865F2, components: components })
+    .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
   payload.components.push(toggleButton);
@@ -509,7 +509,7 @@ async function handleAutoDelete(interaction, settings) {
     
     await response.update({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Auto-Delete ${newEnabled ? 'Enabled' : 'Disabled'}`
+        `${getEmoji("success")} Auto-Delete ${newEnabled ? 'Enabled' : 'Disabled'}`
       )],
       components: []
     });
@@ -539,7 +539,7 @@ async function handleAutoDelete(interaction, settings) {
     
     await modalSubmit.reply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Auto-Delete Configured\n\nGreetings will be deleted after ${clampedDelay} seconds`
+        `${getEmoji("success")} Auto-Delete Configured\n\nGreetings will be deleted after ${clampedDelay} seconds`
       )],
       ephemeral: true
     });
@@ -573,7 +573,7 @@ async function handleTest(interaction, source, settings) {
     await channel.send(greeting);
     
     await interaction.followUp({
-      embeds: [InteractionUtils.createSuccessEmbed(`✅ Test greeting sent to ${channel}`)],
+      embeds: [InteractionUtils.createSuccessEmbed(`${getEmoji("success")} Test greeting sent to ${channel}`)],
       ephemeral: true
     });
   } catch (error) {
@@ -612,7 +612,7 @@ async function handleVariables(interaction) {
   ));
   
   const payload = new ContainerBuilder()
-    .addContainer({ accentColor: 0x5865F2, components: components })
+    .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
   await interaction.reply({ ...payload, ephemeral: true });

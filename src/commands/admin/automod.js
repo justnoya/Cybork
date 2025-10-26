@@ -1,6 +1,8 @@
 const { ApplicationCommandOptionType, ChannelType, ComponentType, ButtonStyle } = require("discord.js");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 const InteractionUtils = require("@helpers/InteractionUtils");
+const emojis = require("@root/emojis.json");
+const { statusEmoji, getEmoji } = require("@helpers/EmojiUtils");
 
 /**
  * @type {import("@structures/Command")}
@@ -47,8 +49,6 @@ async function showAutomodPanel(source, isInteraction, settings) {
   
   components.push(ContainerBuilder.createSeparator());
   
-  const statusEmoji = (enabled) => enabled ? "<:success:1424072640829722745>" : "<:error:1424072711671382076>";
-  
   const antiSpamStatus = automod.anti_spam?.enabled 
     ? `${statusEmoji(true)} **Active** (${automod.anti_spam.threshold} msgs/${automod.anti_spam.timeframe}s)`
     : `${statusEmoji(false)} Disabled`;
@@ -82,19 +82,19 @@ async function showAutomodPanel(source, isInteraction, settings) {
       customId: "automod_antispam",
       label: "Anti-Spam",
       emoji: "🚫",
-      style: automod.anti_spam?.enabled ? ButtonStyle.Success : ButtonStyle.Secondary,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "automod_antilink",
       label: "Anti-Link",
       emoji: "🔗",
-      style: automod.anti_links ? ButtonStyle.Success : ButtonStyle.Secondary,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "automod_badwords",
       label: "Bad Words",
       emoji: "🤬",
-      style: automod.anti_badwords?.enabled ? ButtonStyle.Success : ButtonStyle.Secondary,
+      style: ButtonStyle.Secondary,
     },
   ]);
   
@@ -103,25 +103,25 @@ async function showAutomodPanel(source, isInteraction, settings) {
       customId: "automod_zalgo",
       label: "Anti-Zalgo",
       emoji: "👾",
-      style: automod.anti_zalgo?.enabled ? ButtonStyle.Success : ButtonStyle.Secondary,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "automod_caps",
       label: "Anti-Caps",
       emoji: "📢",
-      style: automod.anti_caps?.enabled ? ButtonStyle.Success : ButtonStyle.Secondary,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "automod_whitelist",
       label: "Whitelist",
       emoji: "📋",
-      style: ButtonStyle.Primary,
+      style: ButtonStyle.Secondary,
     },
   ]);
   
   const payload = new ContainerBuilder()
     .addContainer({
-      accentColor: 0x5865F2,
+      accentColor: 0xFFFFFF,
       components: components
     })
     .build();
@@ -176,7 +176,7 @@ function setupCollector(message, source, isInteraction, settings) {
     } catch (error) {
       console.error("Automod panel error:", error);
       await interaction.reply({
-        content: `❌ An error occurred: ${error.message}`,
+        content: `${getEmoji("error")} An error occurred: ${error.message}`,
         ephemeral: true,
       }).catch(() => {});
     }
@@ -203,7 +203,7 @@ async function handleAntiSpam(interaction, settings) {
   components.push(ContainerBuilder.createTextDisplay("## 🚫 Anti-Spam Protection"));
   components.push(ContainerBuilder.createSeparator());
   components.push(ContainerBuilder.createTextDisplay(
-    `**Current Status:** ${currentEnabled ? '<:success:1424072640829722745> Enabled' : '<:error:1424072711671382076> Disabled'}\n` +
+    `**Current Status:** ${statusEmoji(currentEnabled)} ${currentEnabled ? 'Enabled' : 'Disabled'}\n` +
     `**Threshold:** ${currentThreshold} messages\n` +
     `**Timeframe:** ${currentTimeframe} seconds`
   ));
@@ -213,19 +213,19 @@ async function handleAntiSpam(interaction, settings) {
       customId: `spam_toggle_${!currentEnabled}`,
       label: currentEnabled ? "Disable" : "Enable",
       emoji: currentEnabled ? "🔴" : "🟢",
-      style: currentEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "spam_config",
       label: "Configure",
       emoji: "⚙️",
-      style: ButtonStyle.Primary,
+      style: ButtonStyle.Secondary,
       disabled: !currentEnabled,
     },
   ]);
   
   const payload = new ContainerBuilder()
-    .addContainer({ accentColor: 0x5865F2, components: components })
+    .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
   payload.components.push(toggleButton);
@@ -258,7 +258,7 @@ async function handleAntiSpam(interaction, settings) {
     
     await response.update({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Anti-Spam ${newEnabled ? 'enabled' : 'disabled'}`
+        `${getEmoji("success")} Anti-Spam ${newEnabled ? 'enabled' : 'disabled'}`
       )],
       components: []
     });
@@ -296,7 +296,7 @@ async function handleAntiSpam(interaction, settings) {
     
     await modalSubmit.reply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Anti-Spam configured: ${threshold} messages per ${timeframe} seconds`
+        `${getEmoji("success")} Anti-Spam configured: ${threshold} messages per ${timeframe} seconds`
       )],
       ephemeral: true
     });
@@ -315,7 +315,7 @@ async function handleAntiLink(interaction, settings) {
   
   await interaction.reply({
     embeds: [InteractionUtils.createSuccessEmbed(
-      `✅ Anti-Link ${!currentEnabled ? 'enabled' : 'disabled'}`
+      `${getEmoji("success")} Anti-Link ${!currentEnabled ? 'enabled' : 'disabled'}`
     )],
     ephemeral: true
   });
@@ -336,7 +336,7 @@ async function handleBadWords(interaction, settings) {
   
   await interaction.reply({
     embeds: [InteractionUtils.createSuccessEmbed(
-      `✅ Bad Words Filter ${!currentEnabled ? 'enabled' : 'disabled'}\n\n` +
+      `${getEmoji("success")} Bad Words Filter ${!currentEnabled ? 'enabled' : 'disabled'}\n\n` +
       `${!currentEnabled ? 'Use the dashboard or database to manage keyword list' : ''}`
     )],
     ephemeral: true
@@ -354,7 +354,7 @@ async function handleAntiZalgo(interaction, settings) {
   components.push(ContainerBuilder.createTextDisplay("## 👾 Anti-Zalgo Protection"));
   components.push(ContainerBuilder.createSeparator());
   components.push(ContainerBuilder.createTextDisplay(
-    `**Current Status:** ${currentEnabled ? '<:success:1424072640829722745> Enabled' : '<:error:1424072711671382076> Disabled'}\n` +
+    `**Current Status:** ${statusEmoji(currentEnabled)} ${currentEnabled ? 'Enabled' : 'Disabled'}\n` +
     `**Detection Threshold:** ${currentThreshold}%`
   ));
   
@@ -363,19 +363,19 @@ async function handleAntiZalgo(interaction, settings) {
       customId: `zalgo_toggle_${!currentEnabled}`,
       label: currentEnabled ? "Disable" : "Enable",
       emoji: currentEnabled ? "🔴" : "🟢",
-      style: currentEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "zalgo_config",
       label: "Configure",
       emoji: "⚙️",
-      style: ButtonStyle.Primary,
+      style: ButtonStyle.Secondary,
       disabled: !currentEnabled,
     },
   ]);
   
   const payload = new ContainerBuilder()
-    .addContainer({ accentColor: 0x5865F2, components: components })
+    .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
   payload.components.push(toggleButton);
@@ -404,7 +404,7 @@ async function handleAntiZalgo(interaction, settings) {
     
     await response.update({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Anti-Zalgo ${newEnabled ? 'enabled' : 'disabled'}`
+        `${getEmoji("success")} Anti-Zalgo ${newEnabled ? 'enabled' : 'disabled'}`
       )],
       components: []
     });
@@ -433,7 +433,7 @@ async function handleAntiZalgo(interaction, settings) {
     
     await modalSubmit.reply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Anti-Zalgo configured with ${threshold}% threshold`
+        `${getEmoji("success")} Anti-Zalgo configured with ${threshold}% threshold`
       )],
       ephemeral: true
     });
@@ -451,7 +451,7 @@ async function handleAntiCaps(interaction, settings) {
   components.push(ContainerBuilder.createTextDisplay("## 📢 Anti-Caps Protection"));
   components.push(ContainerBuilder.createSeparator());
   components.push(ContainerBuilder.createTextDisplay(
-    `**Current Status:** ${currentEnabled ? '<:success:1424072640829722745> Enabled' : '<:error:1424072711671382076> Disabled'}\n` +
+    `**Current Status:** ${statusEmoji(currentEnabled)} ${currentEnabled ? 'Enabled' : 'Disabled'}\n` +
     `**Caps Threshold:** ${currentThreshold}%`
   ));
   
@@ -460,19 +460,19 @@ async function handleAntiCaps(interaction, settings) {
       customId: `caps_toggle_${!currentEnabled}`,
       label: currentEnabled ? "Disable" : "Enable",
       emoji: currentEnabled ? "🔴" : "🟢",
-      style: currentEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "caps_config",
       label: "Configure",
       emoji: "⚙️",
-      style: ButtonStyle.Primary,
+      style: ButtonStyle.Secondary,
       disabled: !currentEnabled,
     },
   ]);
   
   const payload = new ContainerBuilder()
-    .addContainer({ accentColor: 0x5865F2, components: components })
+    .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
   payload.components.push(toggleButton);
@@ -501,7 +501,7 @@ async function handleAntiCaps(interaction, settings) {
     
     await response.update({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Anti-Caps ${newEnabled ? 'enabled' : 'disabled'}`
+        `${getEmoji("success")} Anti-Caps ${newEnabled ? 'enabled' : 'disabled'}`
       )],
       components: []
     });
@@ -530,7 +530,7 @@ async function handleAntiCaps(interaction, settings) {
     
     await modalSubmit.reply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Anti-Caps configured with ${threshold}% threshold`
+        `${getEmoji("success")} Anti-Caps configured with ${threshold}% threshold`
       )],
       ephemeral: true
     });
@@ -563,19 +563,19 @@ async function handleWhitelist(interaction, settings) {
       customId: "whitelist_add",
       label: "Add Channel",
       emoji: "➕",
-      style: ButtonStyle.Success,
+      style: ButtonStyle.Secondary,
     },
     {
       customId: "whitelist_remove",
       label: "Remove Channel",
       emoji: "➖",
-      style: ButtonStyle.Danger,
+      style: ButtonStyle.Secondary,
       disabled: whitelistChannels.length === 0,
     },
   ]);
   
   const payload = new ContainerBuilder()
-    .addContainer({ accentColor: 0x5865F2, components: components })
+    .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
   payload.components.push(buttonRow);
@@ -637,7 +637,7 @@ async function handleWhitelist(interaction, settings) {
     
     await modalSubmit.reply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Channel Whitelisted\n\n${channel} is now exempt from automod`
+        `${getEmoji("success")} Channel Whitelisted\n\n${channel} is now exempt from automod`
       )],
       ephemeral: true
     });
@@ -671,7 +671,7 @@ async function handleWhitelist(interaction, settings) {
     
     await modalSubmit.reply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `✅ Channel Removed\n\n<#${channelId}> is no longer whitelisted`
+        `${getEmoji("success")} Channel Removed\n\n<#${channelId}> is no longer whitelisted`
       )],
       ephemeral: true
     });

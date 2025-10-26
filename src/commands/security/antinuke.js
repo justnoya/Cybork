@@ -1,6 +1,8 @@
 const { ApplicationCommandOptionType } = require("discord.js");
 const { getSettings } = require("@schemas/Guild");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
+const emojis = require("@root/emojis.json");
+const { getEmoji, statusEmoji } = require("@helpers/EmojiUtils");
 
 /**
  * @type {import("@structures/Command")}
@@ -188,7 +190,7 @@ module.exports = {
       return interaction.editReply(
         ContainerBuilder.success(
           "Antinuke Enabled",
-          "<:success:1424072640829722745> **Antinuke protection is now active**\n\nUse individual module commands (`/antiban`, `/antikick`, etc.) to configure specific protections.",
+          `${emojis.success} **Antinuke protection is now active**\n\nUse individual module commands (\`/antiban\`, \`/antikick\`, etc.) to configure specific protections.`,
           0x00FF00
         )
       );
@@ -227,7 +229,7 @@ module.exports = {
       return interaction.editReply(
         ContainerBuilder.success(
           "Punishment Updated",
-          `<:success:1424072640829722745> **Punishment type set to ${action}**\n\nViolators will be ${action === 'BAN' ? 'banned' : action === 'KICK' ? 'kicked' : 'stripped of all roles'}`,
+          `${emojis.success} **Punishment type set to ${action}**\n\nViolators will be ${action === 'BAN' ? 'banned' : action === 'KICK' ? 'kicked' : 'stripped of all roles'}`,
           0x00FF00
         )
       );
@@ -298,7 +300,7 @@ module.exports = {
         return interaction.editReply(
           ContainerBuilder.success(
             "User Whitelisted",
-            `<:success:1424072640829722745> Added **${user.tag}** to the antinuke whitelist.\n\nThis user can now perform administrative actions without triggering antinuke.`,
+            `${emojis.success} Added **${user.tag}** to the antinuke whitelist.\n\nThis user can now perform administrative actions without triggering antinuke.`,
             0x00FF00
           )
         );
@@ -317,7 +319,7 @@ module.exports = {
         return interaction.editReply(
           ContainerBuilder.success(
             "User Removed",
-            `<:success:1424072640829722745> Removed **${user.tag}** from the antinuke whitelist.`,
+            `${emojis.success} Removed **${user.tag}** from the antinuke whitelist.`,
             0x00FF00
           )
         );
@@ -345,7 +347,7 @@ async function enableAntinuke(message, settings) {
   return message.safeReply(
     ContainerBuilder.success(
       "Antinuke Enabled",
-      "<:success:1424072640829722745> **Antinuke protection is now active**\n\nUse individual module commands (`!antiban`, `!antikick`, etc.) to configure specific protections.",
+      `${emojis.success} **Antinuke protection is now active**\n\nUse individual module commands (\`!antiban\`, \`!antikick\`, etc.) to configure specific protections.`,
       0x00FF00
     )
   );
@@ -378,7 +380,7 @@ async function setPunishment(message, settings, action) {
   return message.safeReply(
     ContainerBuilder.success(
       "Punishment Updated",
-      `<:success:1424072640829722745> **Punishment type set to ${action}**\n\nViolators will be ${action === 'BAN' ? 'banned' : action === 'KICK' ? 'kicked' : 'stripped of all roles'}`,
+      `${emojis.success} **Punishment type set to ${action}**\n\nViolators will be ${action === 'BAN' ? 'banned' : action === 'KICK' ? 'kicked' : 'stripped of all roles'}`,
       0x00FF00
     )
   );
@@ -400,7 +402,7 @@ async function addWhitelist(message, settings, user) {
   return message.safeReply(
     ContainerBuilder.success(
       "User Whitelisted",
-      `<:success:1424072640829722745> **${user.tag}** added to whitelist\n\nThis user can now perform administrative actions without triggering antinuke`,
+      `${emojis.success} **${user.tag}** added to whitelist\n\nThis user can now perform administrative actions without triggering antinuke`,
       0x00FF00
     )
   );
@@ -419,7 +421,7 @@ async function removeWhitelist(message, settings, user) {
   return message.safeReply(
     ContainerBuilder.success(
       "User Removed",
-      `<:success:1424072640829722745> **${user.tag}** removed from whitelist`,
+      `${emojis.success} **${user.tag}** removed from whitelist`,
       0x00FF00
     )
   );
@@ -471,7 +473,7 @@ async function getStatusDisplay(guild) {
   components.push(ContainerBuilder.createTextDisplay("# 🛡️ Antinuke Status"));
   components.push(ContainerBuilder.createSeparator());
 
-  const mainStatus = antinuke.enabled ? "<:success:1424072640829722745> **ENABLED**" : "<:error:1424072711671382076> **DISABLED**";
+  const mainStatus = antinuke.enabled ? `${emojis.success} **ENABLED**` : `${emojis.error} **DISABLED**`;
   components.push(ContainerBuilder.createTextDisplay(`**System Status:** ${mainStatus}`));
 
   if (antinuke.log_channel) {
@@ -500,7 +502,7 @@ async function getStatusDisplay(guild) {
 
   modules.forEach(module => {
     const enabled = antinuke[module.key]?.enabled;
-    const status = enabled ? "<:success:1424072640829722745>" : "<:error:1424072711671382076>";
+    const status = enabled ? emojis.success : emojis.error;
     const limit = antinuke[module.key]?.limit;
     const extra = limit ? ` (${limit}/10s)` : "";
     components.push(ContainerBuilder.createTextDisplay(`${status} **${module.name}**${extra}`));
