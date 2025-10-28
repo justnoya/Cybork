@@ -122,14 +122,15 @@ async function showGreetingPanel(source, isInteraction, settings) {
     },
   ]);
   
+  components.push(buttonRow1);
+  components.push(buttonRow2);
+  
   const payload = new ContainerBuilder()
     .addContainer({
       accentColor: 0xFFFFFF,
       components: components
     })
     .build();
-  
-  payload.components.push(buttonRow1, buttonRow2);
   
   const msg = isInteraction
     ? await source.editReply(payload)
@@ -225,11 +226,11 @@ async function handleChannels(interaction, source, isInteraction, settings) {
     },
   ]);
   
+  components.push(buttonRow);
+  
   const payload = new ContainerBuilder()
     .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
-  
-  payload.components.push(buttonRow);
   
   await interaction.reply({ ...payload, ephemeral: true });
   
@@ -405,11 +406,11 @@ async function handleEmbedSettings(interaction, settings) {
     },
   ]);
   
+  components.push(toggleButton);
+  
   const payload = new ContainerBuilder()
     .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
-  
-  payload.components.push(toggleButton);
   
   await interaction.reply({ ...payload, ephemeral: true });
   
@@ -481,11 +482,11 @@ async function handleAutoDelete(interaction, settings) {
     },
   ]);
   
+  components.push(toggleButton);
+  
   const payload = new ContainerBuilder()
     .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
-  
-  payload.components.push(toggleButton);
   
   await interaction.reply({ ...payload, ephemeral: true });
   

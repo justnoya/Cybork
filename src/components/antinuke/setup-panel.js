@@ -128,14 +128,17 @@ async function createSetupPanel(guild) {
       .setEmoji("🔄")
   );
 
+  components.push(mainControls);
+  components.push(moduleSelect);
+  components.push(settingsRow);
+  components.push(quickActions);
+  
   const payload = new ContainerBuilder()
     .addContainer({
       accentColor: 0xFFFFFF,
       components: components
     })
     .build();
-  
-  payload.components.push(mainControls, moduleSelect, settingsRow, quickActions);
   
   return payload;
 }
