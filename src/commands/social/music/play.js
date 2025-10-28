@@ -1,8 +1,9 @@
-const { EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
+const { EmbedBuilder, ApplicationCommandOptionType, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const prettyMs = require("pretty-ms");
 const { EMBED_COLORS, MUSIC } = require("@root/config");
 const { SpotifyItemType } = require("@lavaclient/spotify");
 const MusicPlayerView = require("@helpers/MusicPlayerView");
+const MusicPlayerCard = require("@helpers/MusicPlayerCard");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 
 const search_prefix = {
@@ -164,10 +165,10 @@ async function play({ member, guild, channel }, query) {
   if (!started) {
     await player.queue.start();
     
-    // Show the modern music player when starting playback
+    // The trackStart event in lavaclient.js will show the visual card automatically
+    // Return a simple confirmation message
     if (wasEmpty && tracks.length === 1) {
-      const requester = member.user.username;
-      return MusicPlayerView.createNowPlayingDisplay(player, requester, { member }, null);
+      return `✅ Playing now - visual card will appear shortly!`;
     }
   }
 
