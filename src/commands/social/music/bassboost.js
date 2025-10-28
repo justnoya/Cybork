@@ -3,9 +3,11 @@ const { ApplicationCommandOptionType } = require("discord.js");
 
 const levels = {
   none: 0.0,
-  low: 0.1,
-  medium: 0.15,
-  high: 0.25,
+  low: 0.15,
+  medium: 0.25,
+  high: 0.35,
+  extreme: 0.50,
+  insane: 0.75,
 };
 
 /**
@@ -19,7 +21,7 @@ module.exports = {
   command: {
     enabled: true,
     minArgsCount: 1,
-    usage: "<none|low|medium|high>",
+    usage: "<none|low|medium|high|extreme|insane>",
   },
   slashCommand: {
     enabled: true,
@@ -46,6 +48,14 @@ module.exports = {
             name: "high",
             value: "high",
           },
+          {
+            name: "extreme",
+            value: "extreme",
+          },
+          {
+            name: "insane",
+            value: "insane",
+          },
         ],
       },
     ],
@@ -71,7 +81,19 @@ module.exports = {
  */
 function setBassBoost({ client, guildId }, level) {
   const player = client.musicManager.getPlayer(guildId);
-  const bands = new Array(3).fill(null).map((_, i) => ({ band: i, gain: levels[level] }));
+  const gain = levels[level];
+  
+  // Enhanced bassboost with 5 low-frequency bands for better quality
+  const bands = [
+    { band: 0, gain: gain },      // 25 Hz
+    { band: 1, gain: gain * 0.9 }, // 40 Hz
+    { band: 2, gain: gain * 0.8 }, // 63 Hz
+    { band: 3, gain: gain * 0.6 }, // 100 Hz
+    { band: 4, gain: gain * 0.4 }, // 160 Hz
+  ];
+  
   player.setEqualizer(...bands);
-  return `> Set the bassboost level to \`${level}\``;
+  
+  const emoji = level === 'none' ? '🔇' : level === 'insane' ? '💥' : level === 'extreme' ? '🔥' : '🔊';
+  return `${emoji} Set bassboost to **${level.toUpperCase()}** level`;
 }
