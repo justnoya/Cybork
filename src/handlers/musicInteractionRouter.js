@@ -1,5 +1,6 @@
-const { InteractionType, ComponentType } = require("discord.js");
+const { InteractionType, ComponentType, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const MusicPlayerView = require("@helpers/MusicPlayerView");
+const MusicPlayerCard = require("@helpers/MusicPlayerCard");
 
 const interactionTimestamps = new Map();
 
@@ -26,6 +27,78 @@ function addToHistory(guildId, track) {
 
 function getHistory(guildId) {
   return playerHistory.get(guildId) || [];
+}
+
+async function updatePlayerDisplay(interaction, player, requester) {
+  try {
+    const track = player.queue.current;
+    const cardBuffer = await MusicPlayerCard.generateNowPlayingCard(track, player, requester);
+    
+    if (cardBuffer) {
+      const attachment = new AttachmentBuilder(cardBuffer, { name: 'now-playing.png' });
+      
+      const row1 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('music_queue_view')
+          .setLabel('Queue')
+          .setEmoji('📋')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('music_previous')
+          .setEmoji('⏮️')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(player.paused ? 'music_resume' : 'music_pause')
+          .setEmoji(player.paused ? '▶️' : '⏸️')
+          .setStyle(player.paused ? ButtonStyle.Success : ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('music_next')
+          .setEmoji('⏭️')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('music_stop')
+          .setEmoji('⏹️')
+          .setStyle(ButtonStyle.Danger)
+      );
+      
+      const row2 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('music_shuffle')
+          .setEmoji('🔀')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('music_loop')
+          .setEmoji('🔁')
+          .setStyle((player.queue.loop || 0) > 0 ? ButtonStyle.Success : ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('music_voldown')
+          .setLabel('Vol -')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('music_volup')
+          .setLabel('Vol +')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('music_history')
+          .setEmoji('🕐')
+          .setStyle(ButtonStyle.Secondary)
+      );
+      
+      await interaction.update({ 
+        files: [attachment],
+        components: [row1, row2],
+        embeds: []
+      });
+    } else {
+      // Fallback to container view
+      const display = MusicPlayerView.createNowPlayingDisplay(player, requester, interaction, null);
+      await interaction.update(display);
+    }
+  } catch (error) {
+    console.error('Error updating player display:', error);
+    const display = MusicPlayerView.createNowPlayingDisplay(player, requester, interaction, null);
+    await interaction.update(display);
+  }
 }
 
 module.exports = async (client) => {
@@ -74,8 +147,7 @@ module.exports = async (client) => {
           await player.seek(0);
         }
         
-        const display = MusicPlayerView.createNowPlayingDisplay(player, `@${requester}`, interaction, lastInteractionTime);
-        await interaction.update(display);
+        await updatePlayerDisplay(interaction, player, requester);
       }
       
       else if (customId === 'music_pause') {
@@ -88,8 +160,7 @@ module.exports = async (client) => {
         }
         
         await player.pause(true);
-        const display = MusicPlayerView.createNowPlayingDisplay(player, `@${requester}`, interaction, lastInteractionTime);
-        await interaction.update(display);
+        await updatePlayerDisplay(interaction, player, requester);
       }
       
       else if (customId === 'music_resume' || customId === 'music_play') {
@@ -102,8 +173,7 @@ module.exports = async (client) => {
         }
         
         await player.pause(false);
-        const display = MusicPlayerView.createNowPlayingDisplay(player, `@${requester}`, interaction, lastInteractionTime);
-        await interaction.update(display);
+        await updatePlayerDisplay(interaction, player, requester);
       }
       
       else if (customId === 'music_next') {
@@ -122,8 +192,7 @@ module.exports = async (client) => {
         await player.queue.next();
         
         if (player.queue.current) {
-          const display = MusicPlayerView.createNowPlayingDisplay(player, `@${requester}`, interaction, lastInteractionTime);
-          await interaction.update(display);
+          await updatePlayerDisplay(interaction, player, requester);
         } else {
           const display = MusicPlayerView.createEmptyQueueDisplay();
           await interaction.update(display);
@@ -166,8 +235,7 @@ module.exports = async (client) => {
           [queue[i], queue[j]] = [queue[j], queue[i]];
         }
         
-        const display = MusicPlayerView.createNowPlayingDisplay(player, `@${requester}`, interaction, lastInteractionTime);
-        await interaction.update(display);
+        await updatePlayerDisplay(interaction, player, requester);
       }
       
       else if (customId === 'music_loop') {
@@ -183,8 +251,7 @@ module.exports = async (client) => {
         const newLoop = (currentLoop + 1) % 3;
         player.queue.setLoop(newLoop);
         
-        const display = MusicPlayerView.createNowPlayingDisplay(player, `@${requester}`, interaction, lastInteractionTime);
-        await interaction.update(display);
+        await updatePlayerDisplay(interaction, player, requester);
       }
       
       else if (customId === 'music_volup') {
@@ -200,8 +267,7 @@ module.exports = async (client) => {
         const newVol = Math.min(200, currentVol + 10);
         await player.setVolume(newVol);
         
-        const display = MusicPlayerView.createNowPlayingDisplay(player, `@${requester}`, interaction, lastInteractionTime);
-        await interaction.update(display);
+        await updatePlayerDisplay(interaction, player, requester);
       }
       
       else if (customId === 'music_voldown') {
@@ -217,8 +283,7 @@ module.exports = async (client) => {
         const newVol = Math.max(0, currentVol - 10);
         await player.setVolume(newVol);
         
-        const display = MusicPlayerView.createNowPlayingDisplay(player, `@${requester}`, interaction, lastInteractionTime);
-        await interaction.update(display);
+        await updatePlayerDisplay(interaction, player, requester);
       }
       
       else if (customId === 'music_queue_view') {
@@ -235,8 +300,7 @@ module.exports = async (client) => {
           const display = MusicPlayerView.createEmptyQueueDisplay();
           await interaction.update(display);
         } else {
-          const display = MusicPlayerView.createNowPlayingDisplay(player, `@${requester}`, interaction, lastInteractionTime);
-          await interaction.update(display);
+          await updatePlayerDisplay(interaction, player, requester);
         }
       }
       

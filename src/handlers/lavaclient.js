@@ -1,8 +1,9 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require("discord.js");
 const { Cluster } = require("lavaclient");
 const prettyMs = require("pretty-ms");
 const { load, SpotifyItemType } = require("@lavaclient/spotify");
 const MusicPlayerView = require("@helpers/MusicPlayerView");
+const MusicPlayerCard = require("@helpers/MusicPlayerCard");
 const { addToHistory } = require("@handlers/musicInteractionRouter");
 require("@lavaclient/queue/register");
 
@@ -68,8 +69,69 @@ module.exports = (client) => {
     client.logger.log(`🎵 Track started: ${trackInfo.title} in guild ${player.guildId}`);
 
     try {
-      const display = MusicPlayerView.createNowPlayingDisplay(player, requester, null, null);
-      await channel.send(display);
+      // Generate beautiful visual card
+      const cardBuffer = await MusicPlayerCard.generateNowPlayingCard(track, player, requester);
+      
+      if (cardBuffer) {
+        const attachment = new AttachmentBuilder(cardBuffer, { name: 'now-playing.png' });
+        
+        // Create control buttons
+        const row1 = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('music_queue_view')
+            .setLabel('Queue')
+            .setEmoji('📋')
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId('music_previous')
+            .setEmoji('⏮️')
+            .setStyle(ButtonStyle.Primary),
+          new ButtonBuilder()
+            .setCustomId(player.paused ? 'music_resume' : 'music_pause')
+            .setEmoji(player.paused ? '▶️' : '⏸️')
+            .setStyle(player.paused ? ButtonStyle.Success : ButtonStyle.Primary),
+          new ButtonBuilder()
+            .setCustomId('music_next')
+            .setEmoji('⏭️')
+            .setStyle(ButtonStyle.Primary),
+          new ButtonBuilder()
+            .setCustomId('music_stop')
+            .setEmoji('⏹️')
+            .setStyle(ButtonStyle.Danger)
+        );
+        
+        const row2 = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('music_shuffle')
+            .setEmoji('🔀')
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId('music_loop')
+            .setEmoji('🔁')
+            .setStyle((player.queue.loop || 0) > 0 ? ButtonStyle.Success : ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId('music_voldown')
+            .setLabel('Vol -')
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId('music_volup')
+            .setLabel('Vol +')
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId('music_history')
+            .setEmoji('🕐')
+            .setStyle(ButtonStyle.Secondary)
+        );
+        
+        await channel.send({ 
+          files: [attachment],
+          components: [row1, row2]
+        });
+      } else {
+        // Fallback to container view
+        const display = MusicPlayerView.createNowPlayingDisplay(player, requester, null, null);
+        await channel.send(display);
+      }
     } catch (error) {
       client.logger.error("Failed to send now playing message:", error);
       try {
