@@ -41,7 +41,7 @@ class MusicPlayerView {
   }
 
   static getVolumeBar(volume = 100) {
-    const bars = Math.round(volume / 10);
+    const bars = Math.min(10, Math.max(0, Math.round(volume / 10)));
     const filled = '▰';
     const empty = '▱';
     return filled.repeat(bars) + empty.repeat(10 - bars);
@@ -254,9 +254,10 @@ class MusicPlayerView {
       components.push(ContainerBuilder.createThumbnail(thumbnail));
     }
 
+    const totalSongs = track ? queue.length + 1 : queue.length;
     components.push(ContainerBuilder.createTextDisplay(
       `# ${this.EMOJIS.QUEUE} Queue\n\n` +
-      `**Total Songs:** ${queue.length + 1}\n` +
+      `**Total Songs:** ${totalSongs}\n` +
       `**Page ${page} of ${totalPages}**`
     ));
 
