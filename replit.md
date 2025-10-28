@@ -3,7 +3,20 @@
 ## Overview
 This project is a comprehensive, multipurpose Discord bot built with Discord.js v14, offering extensive functionality across administration, moderation, economy, music, giveaways, invites, statistics, tickets, auto-moderation, anime reactions, image manipulation, and general utilities. It features a modular command system supporting both prefix and slash commands. The bot is designed as a production-ready solution with optional web dashboard support, extensive configuration, and robust error handling.
 
-**Recent Update (Oct 2025)**: Completed major system enhancements including:
+**Recent Update (Oct 28, 2025)**: Completed major system enhancements including:
+- **Global Access System**: Converted `noprefix` and `access` commands to work globally across all servers instead of per-server
+  - New BotConfig schema stores global user lists
+  - Users with global access can use commands without prefix in any server
+  - Simplified management with centralized user lists
+- **Music Player Modernization**: Complete UI overhaul using Discord Components V2:
+  - Professional container-based layouts with purple/blue themes
+  - Thumbnail images using HQ quality (not full-size) via media gallery component
+  - Visual volume bars and dynamic status indicators
+  - Improved organization with markdown headers and emoji hierarchy
+  - Modern queue and history displays with better pagination
+  - All music displays now use ContainerBuilder for consistency
+
+**Previous Updates**:
 - Migration of Welcome/Autorole, Automod, and Logging systems to modern interactive Discord components (buttons, modals, select menus) with centralized interaction routing
 - Security fix: Separated noprefix users from developer access with automatic backward-compatible migration
 - Custom command aliases system with interactive management UI and validation
@@ -53,7 +66,7 @@ Preferred communication style: Simple, everyday language.
   - **Welcome/Greet** (`/greet` or `!greet`): Multi-channel support, auto-delete, embed customization, 7 subcommands with full prefix support
   - **Automod** (`/automod` or `!automod`): Rule-based protection (antispam, antilink, antibadwords, antizalgo, anticaps) with channel whitelisting and full prefix support
   - **Logging** (7 commands): Comprehensive event logging (channels, members, messages, moderation, roles)
-- **Music System**: Lavalink-based player with Euphony-style UI, queue management, Spotify integration
+- **Music System**: Lavalink-based player with modern Components V2 UI, queue management, Spotify integration, thumbnail support
 - **Economy**: Coin-based system with daily rewards, begging, gambling
 - **Moderation**: 
   - Standard actions: Kick, ban, timeout, warn, purge with mod logs
@@ -108,7 +121,15 @@ Preferred communication style: Simple, everyday language.
 - **ModernEmbed Fallback**: Maintained for commands not yet migrated to Components V2.
 - **No ASCII Decorations**: Replaced with native Discord markdown and component layouts.
 - **Centralized Emoji System**: All bot emojis managed through `emojis.json` config file with owner commands for runtime management.
-- **Music Player UI**: Euphony-style redesign with orange accent, dark theme, professional button layouts, track numbering, dynamic volume indicators, "Queued by" attribution, queue display with ratings, pagination, history, and album artwork.
+- **Music Player UI**: Modern professional redesign using Components V2 containers with:
+  - Eye-catching layouts with purple/blue accent colors
+  - Thumbnail images (HQ quality, not full-size) displayed via media gallery component
+  - Dynamic volume bars with visual indicators
+  - Clean markdown formatting with emojis for better visual hierarchy
+  - Professional now playing display with track info, status, and up-next preview
+  - Modern queue/history views with pagination
+  - Organized button layouts for all player controls
+  - ContainerBuilder-based UI for consistency across all music displays
 - **Giveaway UI**: Modern professional design with toggle button, supporting both modern (ContainerBuilder with markdown) and classic (embed) views, featuring server name integration and beautiful formatting.
 
 ## External Dependencies
