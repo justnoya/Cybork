@@ -4,12 +4,17 @@ const prettyMs = require("pretty-ms");
 
 class MusicPlayerView {
   static THEME = {
-    PURPLE: 0x9B59B6,
-    BLUE: 0x5865F2,
-    GREEN: 0x57F287,
-    RED: 0xED4245,
-    ORANGE: 0xF26522,
-    WHITE: 0xFFFFFF,
+    SPOTIFY_GREEN: 0x1DB954,
+    SPOTIFY_BLACK: 0x191414,
+    PURPLE: 0xA855F7,
+    BLUE: 0x3B82F6,
+    CYAN: 0x06B6D4,
+    GREEN: 0x10B981,
+    RED: 0xEF4444,
+    ORANGE: 0xF97316,
+    PINK: 0xEC4899,
+    DARK: 0x1F2937,
+    ACCENT: 0x8B5CF6,
   };
 
   static EMOJIS = {
@@ -17,6 +22,7 @@ class MusicPlayerView {
     CASSETTE: '📼',
     HEADPHONES: '🎧',
     VINYL: '💿',
+    CD: '💿',
     SPEAKER: '🔊',
     VOLUME_LOW: '🔉',
     VOLUME_MED: '🔊',
@@ -28,10 +34,14 @@ class MusicPlayerView {
     STOP: '⏹️',
     SHUFFLE: '🔀',
     REPEAT: '🔁',
+    REPEAT_ONE: '🔂',
     CLOCK: '🕐',
     QUEUE: '📋',
     STAR: '⭐',
     FIRE: '🔥',
+    CHECK: '✅',
+    NOTES: '🎶',
+    ARROW: '→',
   };
 
   static getVolumeEmoji(volume = 100) {
@@ -53,13 +63,73 @@ class MusicPlayerView {
 
   static getThumbnailUrl(track) {
     const trackInfo = track.info || track;
+    
+    if (trackInfo.artworkUrl || track.artworkUrl) {
+      return trackInfo.artworkUrl || track.artworkUrl;
+    }
+    
+    if (trackInfo.thumbnail || track.thumbnail) {
+      return trackInfo.thumbnail || track.thumbnail;
+    }
+    
     if (trackInfo.sourceName === "youtube" || track.sourceName === "youtube") {
       const identifier = trackInfo.identifier || track.identifier;
       if (identifier) {
-        return `https://img.youtube.com/vi/${identifier}/hqdefault.jpg`;
+        return `https://img.youtube.com/vi/${identifier}/maxresdefault.jpg`;
       }
     }
+    
     return null;
+  }
+
+  static createProgressBar(current, total, length = 18) {
+    if (!total || total === 0) return '▱'.repeat(length);
+    const progress = Math.min(Math.max(current / total, 0), 1);
+    const filledLength = Math.round(length * progress);
+    const emptyLength = length - filledLength;
+    return '▰'.repeat(filledLength) + '▱'.repeat(emptyLength);
+  }
+
+  static createEnqueuedCard(track, requester, position = null, queueLength = 0) {
+    const trackInfo = track.info || track;
+    const title = trackInfo.title || 'Unknown Track';
+    const author = trackInfo.author || 'Unknown Artist';
+    const duration = this.formatDuration(trackInfo.length || 0);
+    const thumbnail = this.getThumbnailUrl(track);
+    
+    const components = [];
+    
+    if (thumbnail) {
+      components.push(ContainerBuilder.createThumbnail(thumbnail));
+    }
+    
+    components.push(ContainerBuilder.createTextDisplay(
+      `# ${this.EMOJIS.MUSIC} Enqueued Track`
+    ));
+    
+    const titleMarkdown = trackInfo.uri 
+      ? `[${title}](${trackInfo.uri})` 
+      : `**${title}**`;
+    
+    components.push(ContainerBuilder.createTextDisplay(
+      `### ${this.EMOJIS.CHECK} Added ${titleMarkdown} to the queue.`
+    ));
+    
+    components.push(ContainerBuilder.createSeparator());
+    
+    const infoText = [
+      `**Duration :** ${duration}`,
+      `**Requestor :** @${requester}`,
+      position !== null ? `**Position :** ${position}` : null
+    ].filter(Boolean).join(' • ');
+    
+    components.push(ContainerBuilder.createTextDisplay(infoText));
+    
+    const container = new ContainerBuilder()
+      .addContainer({ accentColor: this.THEME.PURPLE, components })
+      .build();
+    
+    return container;
   }
 
   static createEmptyQueueDisplay() {
@@ -81,7 +151,7 @@ class MusicPlayerView {
     ));
 
     const container = new ContainerBuilder()
-      .addContainer({ accentColor: this.THEME.BLUE, components })
+      .addContainer({ accentColor: this.THEME.DARK, components })
       .build();
 
     const row1 = new ActionRowBuilder().addComponents(
@@ -127,8 +197,10 @@ class MusicPlayerView {
     const trackInfo = track.info || track;
     const title = trackInfo.title || 'Unknown Track';
     const author = trackInfo.author || 'Unknown Artist';
-    const duration = this.formatDuration(trackInfo.length || 0);
-    const volumeBar = this.getVolumeBar(volume);
+    const currentTime = player.position || 0;
+    const totalTime = trackInfo.length || 0;
+    const currentTimeStr = this.formatDuration(currentTime);
+    const totalTimeStr = this.formatDuration(totalTime);
     const volumeEmoji = this.getVolumeEmoji(volume);
 
     const components = [];
@@ -138,30 +210,35 @@ class MusicPlayerView {
       components.push(ContainerBuilder.createThumbnail(thumbnail));
     }
 
+    const titleLink = trackInfo.uri ? `[${title}](${trackInfo.uri})` : title;
     const statusIcon = isPaused ? this.EMOJIS.PAUSE : this.EMOJIS.PLAY;
-    const loopIcon = loopMode === 1 ? `${this.EMOJIS.REPEAT} Track` : loopMode === 2 ? `${this.EMOJIS.REPEAT} Queue` : '';
+    const loopIcon = loopMode === 1 ? this.EMOJIS.REPEAT_ONE : loopMode === 2 ? this.EMOJIS.REPEAT : '';
     
     components.push(ContainerBuilder.createTextDisplay(
-      `# ${this.EMOJIS.MUSIC} Now Playing\n\n` +
-      `**${title}**\n` +
-      `*${author}*`
+      `# ${this.EMOJIS.HEADPHONES} Now Playing`
+    ));
+
+    components.push(ContainerBuilder.createTextDisplay(
+      `### **${titleLink}**\n*${author}*`
     ));
 
     components.push(ContainerBuilder.createSeparator());
 
+    const progressBar = this.createProgressBar(currentTime, totalTime, 18);
     components.push(ContainerBuilder.createTextDisplay(
-      `### ${this.EMOJIS.VINYL} Track Info\n` +
-      `> **Duration:** ${duration}\n` +
-      `> **Status:** ${statusIcon} ${isPaused ? 'Paused' : 'Playing'}\n` +
-      (loopIcon ? `> **Loop:** ${loopIcon}\n` : '') +
-      `> **Requested by:** @${requester}`
+      `${progressBar}\n\`${currentTimeStr}\` ${this.EMOJIS.ARROW} \`${totalTimeStr}\``
     ));
 
     components.push(ContainerBuilder.createSeparator());
 
+    const statusParts = [
+      `${statusIcon} **${isPaused ? 'Paused' : 'Playing'}**`,
+      loopIcon ? `${loopIcon} **Loop**` : null,
+      `${volumeEmoji} **${volume}%**`
+    ].filter(Boolean).join(' • ');
+
     components.push(ContainerBuilder.createTextDisplay(
-      `### ${volumeEmoji} Volume: ${volume}%\n` +
-      `${volumeBar}`
+      `${statusParts}\n**Requested by:** @${requester}`
     ));
 
     if (queue.length > 0) {
@@ -169,15 +246,15 @@ class MusicPlayerView {
       
       const upNext = queue.slice(0, 3).map((t, i) => {
         const tInfo = t.info || t;
-        const trackTitle = tInfo.title || 'Unknown';
+        const trackTitle = (tInfo.title || 'Unknown').substring(0, 45);
         const trackDuration = this.formatDuration(tInfo.length || 0);
-        return `**${i + 1}.** ${trackTitle} \`[${trackDuration}]\``;
+        return `**${i + 1}.** ${trackTitle} \`${trackDuration}\``;
       }).join('\n');
 
-      const moreText = queue.length > 3 ? `\n*...and ${queue.length - 3} more*` : '';
+      const moreText = queue.length > 3 ? `\n*+${queue.length - 3} more tracks*` : '';
       
       components.push(ContainerBuilder.createTextDisplay(
-        `### ${this.EMOJIS.QUEUE} Up Next (${queue.length} song${queue.length !== 1 ? 's' : ''})\n` +
+        `### ${this.EMOJIS.QUEUE} Up Next (${queue.length})\n` +
         upNext +
         moreText
       ));
@@ -241,7 +318,7 @@ class MusicPlayerView {
   static createQueueDisplay(player, requester, page = 1) {
     const queue = player.queue.tracks || [];
     const track = player.queue.current;
-    const itemsPerPage = 8;
+    const itemsPerPage = 10;
     const start = (page - 1) * itemsPerPage;
     const end = start + itemsPerPage;
     const tracksToShow = queue.slice(start, end);
@@ -255,25 +332,32 @@ class MusicPlayerView {
     }
 
     const totalSongs = track ? queue.length + 1 : queue.length;
+    const currentTrackDuration = track ? ((track.info || track).length || 0) : 0;
+    const queueDuration = queue.reduce((acc, t) => acc + ((t.info || t).length || 0), 0);
+    const totalDuration = currentTrackDuration + queueDuration;
+    const totalDurationStr = this.formatDuration(totalDuration);
+
     components.push(ContainerBuilder.createTextDisplay(
-      `# ${this.EMOJIS.QUEUE} Queue\n\n` +
-      `**Total Songs:** ${totalSongs}\n` +
-      `**Page ${page} of ${totalPages}**`
+      `# ${this.EMOJIS.QUEUE} Music Queue`
+    ));
+
+    components.push(ContainerBuilder.createTextDisplay(
+      `**${totalSongs} tracks** • **${totalDurationStr}** total • Page **${page}/${totalPages}**`
     ));
 
     components.push(ContainerBuilder.createSeparator());
 
     if (track) {
       const trackInfo = track.info || track;
-      const title = trackInfo.title || 'Unknown Track';
+      const title = (trackInfo.title || 'Unknown Track').substring(0, 50);
       const author = trackInfo.author || 'Unknown Artist';
       const duration = this.formatDuration(trackInfo.length || 0);
+      const titleLink = trackInfo.uri ? `[${title}](${trackInfo.uri})` : title;
 
       components.push(ContainerBuilder.createTextDisplay(
         `### ${this.EMOJIS.PLAY} Now Playing\n` +
-        `**${title}**\n` +
-        `${author} • \`${duration}\`\n` +
-        `*Requested by @${requester}*`
+        `**${titleLink}**\n` +
+        `${author} • \`${duration}\` • Requested by @${requester}`
       ));
     }
 
@@ -283,22 +367,22 @@ class MusicPlayerView {
       const queueList = tracksToShow.map((t, i) => {
         const position = start + i + 1;
         const tInfo = t.info || t;
-        const trackTitle = (tInfo.title || 'Unknown').length > 40 ? tInfo.title.substring(0, 37) + '...' : tInfo.title;
-        const trackAuthor = tInfo.author || 'Unknown Artist';
+        const trackTitle = (tInfo.title || 'Unknown').substring(0, 42);
+        const trackAuthor = (tInfo.author || 'Unknown Artist').substring(0, 30);
         const trackDuration = this.formatDuration(tInfo.length || 0);
         const tRequester = t.requester || requester;
-        return `**${position}.** ${trackTitle}\n${trackAuthor} • \`${trackDuration}\` • @${tRequester}`;
+        return `**${position}.** ${trackTitle}\n     ${trackAuthor} • \`${trackDuration}\` • @${tRequester}`;
       }).join('\n\n');
 
       components.push(ContainerBuilder.createTextDisplay(
-        `### ${this.EMOJIS.FIRE} Up Next\n` +
+        `### ${this.EMOJIS.NOTES} Up Next\n` +
         queueList
       ));
     } else if (queue.length === 0) {
       components.push(ContainerBuilder.createSeparator());
       components.push(ContainerBuilder.createTextDisplay(
-        `*No songs in queue*\n` +
-        `Use \`/play\` to add more songs!`
+        `*Queue is empty*\n` +
+        `Use \`/play\` to add songs!`
       ));
     }
 

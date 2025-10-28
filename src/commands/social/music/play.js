@@ -3,6 +3,7 @@ const prettyMs = require("pretty-ms");
 const { EMBED_COLORS, MUSIC } = require("@root/config");
 const { SpotifyItemType } = require("@lavaclient/spotify");
 const MusicPlayerView = require("@helpers/MusicPlayerView");
+const ContainerBuilder = require("@helpers/ContainerBuilder");
 
 const search_prefix = {
   YT: "ytsearch",
@@ -170,53 +171,41 @@ async function play({ member, guild, channel }, query) {
     }
   }
 
-  // For adding to existing queue or playlists, show traditional embed
+  // Show professional enqueued card for single tracks
   if (tracks.length === 1) {
     const track = tracks[0];
-    const fields = [];
-    embed
-      .setAuthor({ name: "Added Track to queue" })
-      .setDescription(`[${track.info.title}](${track.info.uri})`)
-      .setFooter({ text: `Requested By: ${member.user.username}` });
-
-    fields.push({
-      name: "Song Duration",
-      value: "`" + prettyMs(track.info.length, { colonNotation: true }) + "`",
-      inline: true,
-    });
-
-    if (player?.queue?.tracks?.length > 0) {
-      fields.push({
-        name: "Position in Queue",
-        value: (player.queue.tracks.length + 1).toString(),
-        inline: true,
-      });
-    }
-    embed.addFields(fields);
+    const position = player?.queue?.tracks?.length > 0 ? player.queue.tracks.length : null;
+    const queueLength = player?.queue?.tracks?.length || 0;
+    
+    return MusicPlayerView.createEnqueuedCard(track, member.user.username, position, queueLength);
   } else {
-    embed
-      .setAuthor({ name: "Added Playlist to queue" })
-      .setDescription(description)
-      .addFields(
-        {
-          name: "Enqueued",
-          value: `${tracks.length} songs`,
-          inline: true,
-        },
-        {
-          name: "Playlist duration",
-          value:
-            "`" +
-            prettyMs(
-              tracks.map((t) => t.info.length).reduce((a, b) => a + b, 0),
-              { colonNotation: true }
-            ) +
-            "`",
-          inline: true,
-        }
-      )
-      .setFooter({ text: `Requested By: ${member.user.username}` });
+    // For playlists, show professional playlist added card
+    const components = [];
+    
+    components.push(ContainerBuilder.createTextDisplay(
+      `# ${MusicPlayerView.EMOJIS.QUEUE} Playlist Enqueued`
+    ));
+    
+    components.push(ContainerBuilder.createTextDisplay(
+      `### ${MusicPlayerView.EMOJIS.CHECK} Added **${description}** to the queue.`
+    ));
+    
+    components.push(ContainerBuilder.createSeparator());
+    
+    const totalDuration = prettyMs(
+      tracks.map((t) => t.info.length).reduce((a, b) => a + b, 0),
+      { colonNotation: true }
+    );
+    
+    components.push(ContainerBuilder.createTextDisplay(
+      `**Tracks:** ${tracks.length} songs • **Duration:** ${totalDuration}\n` +
+      `**Requested by:** @${member.user.username}`
+    ));
+    
+    const container = new ContainerBuilder()
+      .addContainer({ accentColor: MusicPlayerView.THEME.PURPLE, components })
+      .build();
+    
+    return container;
   }
-
-  return { embeds: [embed] };
 }
