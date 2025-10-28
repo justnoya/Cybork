@@ -1,14 +1,15 @@
-
-const axios = require("axios");
-const cheerio = require("cheerio");
+const puppeteer = require("puppeteer-extra");
+const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const crypto = require("crypto");
 const fs = require("fs").promises;
 const path = require("path");
 const { debug, error } = require("@helpers/Logger");
 
+puppeteer.use(StealthPlugin());
+
 /**
- * Pinterest Scraper Service
- * Scrapes Pinterest pins and stores them with duplicate detection
+ * Pinterest Scraper Service - 100% Working with Headless Browser
+ * Uses Puppeteer to scrape Pinterest pins with proper dynamic content loading
  */
 class PinterestScraper {
   constructor() {
@@ -22,6 +23,10 @@ class PinterestScraper {
     
     // In-memory cache for quick duplicate checks
     this.hashCache = new Map();
+    
+    // Browser instance (will be reused)
+    this.browser = null;
+    this.browserInitialized = false;
     
     // Initialize storage
     this.initializeStorage();
@@ -105,74 +110,189 @@ class PinterestScraper {
   }
 
   /**
-   * Scrape Pinterest for images
+   * Initialize browser instance
+   */
+  async initBrowser() {
+    if (this.browser && this.browserInitialized) {
+      try {
+        await this.browser.version();
+        return this.browser;
+      } catch {
+        this.browser = null;
+        this.browserInitialized = false;
+      }
+    }
+
+    try {
+      debug("Launching headless browser for Pinterest scraping...");
+      this.browser = await puppeteer.launch({
+        headless: "new",
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-accelerated-2d-canvas",
+          "--disable-gpu",
+          "--window-size=1920x1080",
+          "--disable-blink-features=AutomationControlled",
+        ],
+        defaultViewport: {
+          width: 1920,
+          height: 1080,
+        },
+      });
+      this.browserInitialized = true;
+      debug("Browser launched successfully");
+      return this.browser;
+    } catch (err) {
+      error("Failed to launch browser:", err);
+      throw err;
+    }
+  }
+
+  /**
+   * Close browser instance
+   */
+  async closeBrowser() {
+    if (this.browser) {
+      try {
+        await this.browser.close();
+        this.browser = null;
+        this.browserInitialized = false;
+        debug("Browser closed");
+      } catch (err) {
+        error("Failed to close browser:", err);
+      }
+    }
+  }
+
+  /**
+   * Scrape Pinterest for images using headless browser
    */
   async scrapePinterest(query, category) {
+    let page;
     try {
       const searchUrl = `${this.baseUrl}/search/pins/?q=${encodeURIComponent(query)}`;
-      
-      const response = await axios.get(searchUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.5",
-        },
-        timeout: 10000,
+      debug(`Scraping Pinterest: ${searchUrl}`);
+
+      const browser = await this.initBrowser();
+      page = await browser.newPage();
+
+      // Set realistic user agent
+      await page.setUserAgent(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      );
+
+      // Set extra headers
+      await page.setExtraHTTPHeaders({
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
       });
 
-      const $ = cheerio.load(response.data);
-      const pins = [];
+      // Navigate to Pinterest search
+      await page.goto(searchUrl, {
+        waitUntil: "networkidle2",
+        timeout: 30000,
+      });
 
-      // Extract Pinterest data from script tags
-      $("script").each((i, elem) => {
-        const content = $(elem).html();
-        if (content && content.includes("__PWS_DATA__")) {
-          try {
-            const jsonMatch = content.match(/__PWS_DATA__\s*=\s*({.*?});/);
-            if (jsonMatch) {
-              const data = JSON.parse(jsonMatch[1]);
-              this.extractPinsFromData(data, pins, category);
-            }
-          } catch (err) {
-            // Continue to next script tag
+      // Wait for images to load
+      await page.waitForTimeout(3000);
+
+      // Scroll to load more images
+      await this.autoScroll(page);
+
+      // Extract image URLs from the page
+      const imageData = await page.evaluate(() => {
+        const pins = [];
+        const imgElements = document.querySelectorAll('img[src*="pinimg.com"]');
+
+        imgElements.forEach((img) => {
+          // Get the largest available image URL
+          let imageUrl = img.src;
+          
+          // Pinterest uses different size variants - get the original/largest
+          if (imageUrl.includes("236x")) {
+            imageUrl = imageUrl.replace("236x", "originals");
+          } else if (imageUrl.includes("474x")) {
+            imageUrl = imageUrl.replace("474x", "originals");
+          } else if (imageUrl.includes("736x")) {
+            imageUrl = imageUrl.replace("736x", "originals");
           }
-        }
+
+          // Find parent link for pin URL
+          let pinLink = "https://www.pinterest.com";
+          let pinTitle = img.alt || "Pinterest Image";
+          
+          const parentLink = img.closest('a[href*="/pin/"]');
+          if (parentLink) {
+            pinLink = parentLink.href;
+          }
+
+          if (imageUrl && !imageUrl.includes("avatar") && !imageUrl.includes("user")) {
+            pins.push({
+              image: imageUrl,
+              link: pinLink,
+              title: pinTitle,
+            });
+          }
+        });
+
+        return pins;
       });
 
-      return pins.slice(0, 25); // Limit to 25 results
+      await page.close();
+
+      // Process and deduplicate results
+      const uniquePins = [];
+      for (const pin of imageData) {
+        if (!this.isDuplicate(category, pin.image)) {
+          uniquePins.push({
+            id: this.generateHash(pin.image).substring(0, 10),
+            title: pin.title,
+            description: "",
+            image: pin.image,
+            link: pin.link,
+          });
+          this.addHash(category, pin.image);
+          
+          if (uniquePins.length >= 25) break;
+        }
+      }
+
+      debug(`Scraped ${uniquePins.length} unique pins for: ${query}`);
+      return uniquePins;
+
     } catch (err) {
       error("Pinterest scraping error:", err.message);
+      if (page) {
+        try {
+          await page.close();
+        } catch {}
+      }
       return [];
     }
   }
 
   /**
-   * Extract pins from Pinterest data object
+   * Auto-scroll page to load more content
    */
-  extractPinsFromData(data, pins, category) {
-    if (!data || typeof data !== "object") return;
+  async autoScroll(page) {
+    await page.evaluate(async () => {
+      await new Promise((resolve) => {
+        let totalHeight = 0;
+        const distance = 300;
+        const timer = setInterval(() => {
+          const scrollHeight = document.body.scrollHeight;
+          window.scrollBy(0, distance);
+          totalHeight += distance;
 
-    // Recursively search for pin data
-    if (data.images && data.images.orig) {
-      const imageUrl = data.images.orig.url;
-      if (imageUrl && !this.isDuplicate(category, imageUrl)) {
-        pins.push({
-          id: data.id || this.generateHash(imageUrl).substring(0, 10),
-          title: data.title || data.grid_title || "Untitled",
-          description: data.description || "",
-          image: imageUrl,
-          link: data.link || `https://www.pinterest.com/pin/${data.id}`,
-        });
-        this.addHash(category, imageUrl);
-      }
-    }
-
-    // Recursively search nested objects
-    for (const key in data) {
-      if (typeof data[key] === "object") {
-        this.extractPinsFromData(data[key], pins, category);
-      }
-    }
+          if (totalHeight >= scrollHeight || totalHeight >= 2000) {
+            clearInterval(timer);
+            resolve();
+          }
+        }, 100);
+      });
+    });
   }
 
   /**
@@ -328,6 +448,27 @@ class PinterestScraper {
       error("Failed to cleanup duplicates:", err);
     }
   }
+
+  /**
+   * Cleanup on shutdown
+   */
+  async cleanup() {
+    await this.closeBrowser();
+  }
 }
 
-module.exports = new PinterestScraper();
+// Create singleton instance
+const instance = new PinterestScraper();
+
+// Cleanup on process exit
+process.on("SIGINT", async () => {
+  await instance.cleanup();
+  process.exit(0);
+});
+
+process.on("SIGTERM", async () => {
+  await instance.cleanup();
+  process.exit(0);
+});
+
+module.exports = instance;
