@@ -1,4 +1,4 @@
-const MusicPlayerBuilder = require("@helpers/MusicPlayerBuilder");
+const MusicPlayerView = require("@helpers/MusicPlayerView");
 
 /**
  * @param {import('discord.js').ButtonInteraction} interaction
@@ -114,20 +114,20 @@ module.exports = async (interaction) => {
         
       case 'music_queue':
         const requester = member?.user?.username ? `@${member.user.username}` : "@User";
-        const queueDisplay = MusicPlayerBuilder.createQueueDisplay(player, requester, 1);
+        const queueDisplay = MusicPlayerView.createQueueDisplay(player, requester, 1);
         return interaction.editReply(queueDisplay);
         
       case 'music_back':
         const track = player.queue.current;
         const requesterBack = track?.requester ? `@${track.requester}` : (member?.user?.username ? `@${member.user.username}` : "@User");
-        const npDisplay = MusicPlayerBuilder.createNowPlayingDisplay(player, requesterBack, interaction);
+        const npDisplay = MusicPlayerView.createNowPlayingDisplay(player, requesterBack, interaction);
         return interaction.editReply(npDisplay);
         
       default:
         if (customId.startsWith('queue_page_')) {
           const page = parseInt(customId.replace('queue_page_', ''));
           const requesterPage = member?.user?.username ? `@${member.user.username}` : "@User";
-          const pageDisplay = MusicPlayerBuilder.createQueueDisplay(player, requesterPage, page);
+          const pageDisplay = MusicPlayerView.createQueueDisplay(player, requesterPage, page);
           return interaction.editReply(pageDisplay);
         }
         return;
@@ -136,7 +136,7 @@ module.exports = async (interaction) => {
     if (player.queue.current) {
       const track = player.queue.current;
       const requester = track?.requester ? `@${track.requester}` : (member?.user?.username ? `@${member.user.username}` : "@User");
-      const updatedDisplay = MusicPlayerBuilder.createNowPlayingDisplay(player, requester, interaction);
+      const updatedDisplay = MusicPlayerView.createNowPlayingDisplay(player, requester, interaction);
       await interaction.editReply(updatedDisplay);
     }
   } catch (error) {
