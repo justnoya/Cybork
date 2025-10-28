@@ -27,6 +27,7 @@ Preferred communication style: Simple, everyday language.
 ### Feature Specifications
 - **Admin Systems**: Autorole, Welcome/Greet, Automod (rule-based protection), Logging.
 - **Music System**: Professional Lavalink-based player with Components V2 UI, Spotify integration, advanced audio effects (Bassboost, Karaoke, 8D Audio, Nightcore, Vaporwave, Tremolo, Distortion), and dual-API lyrics system (LRCLIB, lyrics.ovh).
+- **Listening Parties**: Synchronized music playback across multiple users with shared AudioPlayer, vote-skip system (configurable percentage), party management (create/join/leave/info/end), queue management, and interactive party dashboard with real-time updates.
 - **Economy**: Coin-based system with daily rewards, begging, gambling.
 - **Moderation**: Standard actions (kick, ban, timeout, warn, purge), channel control (lock/unlock), role-based muting, interactive audit logs.
 - **Security**: Complete antinuke protection suite with 11 commands, configurable modules, whitelisting, auto-recovery, and punishment system.
@@ -72,4 +73,41 @@ Preferred communication style: Simple, everyday language.
 - **lyrics.ovh API**: Fallback lyrics provider.
 
 ### Key NPM Packages
-- `discord.js`, `mongoose`, `lavaclient`, `@lavaclient/queue`, `@lavaclient/spotify`, `discord-giveaways`, `express`, `ejs`, `express-session`, `connect-mongo`, `@vitalets/google-translate-api`, `nekos.life`, `pino`, `pino-pretty`, `sourcebin_js`, `discord-together`.
+- `discord.js`, `@discordjs/voice`, `mongoose`, `lavaclient`, `@lavaclient/queue`, `@lavaclient/spotify`, `discord-giveaways`, `express`, `ejs`, `express-session`, `connect-mongo`, `@vitalets/google-translate-api`, `nekos.life`, `pino`, `pino-pretty`, `sourcebin_js`, `discord-together`, `play-dl`.
+
+## Recent Changes (October 28, 2025)
+
+### Listening Parties Feature
+Implemented synchronized listening party system allowing multiple users to listen to music together with perfect synchronization:
+
+**Architecture:**
+- **PartyManager** (`src/handlers/partyManager.js`): Manages party lifecycle, members, settings, and voice connections
+- **PartyMusicHandler** (`src/handlers/partyMusicHandler.js`): Handles synchronized playback using `@discordjs/voice` with shared AudioPlayer
+- **Party Schema** (`src/database/schemas/Party.js`): MongoDB schema for persistent party data
+- **Party Interaction Router** (`src/handlers/partyInteractionRouter.js`): Handles interactive buttons (skip votes, queue, info)
+
+**Commands:**
+- `/party-create [name]` - Create a new listening party (configurable vote percentage, max members)
+- `/party-join <party-id>` - Join an existing party
+- `/party-leave` - Leave current party
+- `/party-info [party-id]` - View party details and statistics
+- `/party-end` - End party (host only)
+- `/party-play <song>` - Add and play songs in party (synchronized for all members)
+- `/party-skip` - Vote to skip current song
+
+**Key Features:**
+- Single AudioPlayer broadcasts to multiple VoiceConnections for perfect sync
+- Configurable vote-skip system (default 50%)
+- Auto-recovery on disconnections
+- Real-time party status updates
+- Queue management with party member visibility
+- Professional UI using ContainerBuilder with music cards
+- Host controls and optional guest controls
+- Automatic cleanup for inactive parties
+
+**Technical Details:**
+- Uses `play-dl` for YouTube streaming
+- Shared AudioPlayer pattern ensures all listeners hear the same timestamp
+- Party state persisted in MongoDB
+- Event-driven architecture for player state management
+- Graceful error handling with fallback mechanisms

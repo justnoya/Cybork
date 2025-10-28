@@ -18,6 +18,8 @@ const giveawaysHandler = require("../handlers/giveaway");
 const { DiscordTogether } = require("discord-together");
 const EmojiManager = require("../helpers/EmojiManager");
 const InteractionRouter = require("../handlers/interactionRouter");
+const PartyManager = require("../handlers/partyManager");
+const PartyMusicHandler = require("../handlers/partyMusicHandler");
 
 module.exports = class BotClient extends Client {
   constructor() {
@@ -82,6 +84,15 @@ module.exports = class BotClient extends Client {
 
     // Interaction Router
     this.interactionRouter = new InteractionRouter(this);
+
+    // Party Manager
+    this.partyManager = new PartyManager(this);
+
+    // Party Music Handler
+    this.partyMusicHandler = new PartyMusicHandler(this);
+
+    // Party Interaction Router
+    require("../handlers/partyInteractionRouter").init(this);
   }
 
   /**
