@@ -15,6 +15,19 @@ This project is a comprehensive, multipurpose Discord bot built with Discord.js 
   - Improved organization with markdown headers and emoji hierarchy
   - Modern queue and history displays with better pagination
   - All music displays now use ContainerBuilder for consistency
+- **Professional Audio Effects Suite**: Revolutionary music enhancement system:
+  - Enhanced bassboost with 6 quality levels (none, low, medium, high, extreme, insane)
+  - 6 innovative audio effects no competitors offer: karaoke (vocal removal), 8D (surround sound), nightcore (speed/pitch up), vaporwave (speed/pitch down), tremolo (volume oscillation), distortion (hard rock sound)
+  - All effects use Lavalink's professional-grade filters with toggle on/off functionality
+  - Professional 5-band equalizer for bassboost with graduated gains (25Hz-160Hz)
+- **Advanced Lyrics System**: Complete lyrics integration with professional display:
+  - LRCLIB API integration (3M+ lyrics database, free, no auth required)
+  - Fallback to lyrics.ovh API for better coverage
+  - Auto-detection of currently playing song
+  - Empty lyrics validation to prevent misleading displays
+  - Professional Container-based UI with metadata (word count, line count, duration)
+  - Smart truncation for long lyrics with helpful tips
+  - Intelligent artist/title parsing from queries
 
 **Previous Updates**:
 - Migration of Welcome/Autorole, Automod, and Logging systems to modern interactive Discord components (buttons, modals, select menus) with centralized interaction routing
@@ -66,7 +79,21 @@ Preferred communication style: Simple, everyday language.
   - **Welcome/Greet** (`/greet` or `!greet`): Multi-channel support, auto-delete, embed customization, 7 subcommands with full prefix support
   - **Automod** (`/automod` or `!automod`): Rule-based protection (antispam, antilink, antibadwords, antizalgo, anticaps) with channel whitelisting and full prefix support
   - **Logging** (7 commands): Comprehensive event logging (channels, members, messages, moderation, roles)
-- **Music System**: Lavalink-based player with modern Components V2 UI, queue management, Spotify integration, thumbnail support
+- **Music System**: Professional Lavalink-based player with Spotify-quality UI and advanced features:
+  - Modern Components V2 UI with professional "Enqueued Track" and "Now Playing" displays
+  - Queue management with pagination and thumbnail support
+  - Spotify integration for track search and playback
+  - Professional audio effects suite:
+    - **Bassboost**: 6 quality levels (none to insane) with 5-band EQ (25Hz-160Hz)
+    - **Karaoke**: Vocal removal for sing-along mode
+    - **8D Audio**: Immersive surround sound experience
+    - **Nightcore**: Speed up + pitch up (1.3x) for high-energy tracks
+    - **Vaporwave**: Slow down + pitch down (0.8x) for chill vibes
+    - **Tremolo**: Volume oscillation effect (4Hz frequency)
+    - **Distortion**: Hard rock sound with scale adjustment
+  - Advanced lyrics system with dual-API fallback (LRCLIB + lyrics.ovh)
+  - Professional metadata displays and error handling
+  - All effects toggle independently with visual feedback
 - **Economy**: Coin-based system with daily rewards, begging, gambling
 - **Moderation**: 
   - Standard actions: Kick, ban, timeout, warn, purge with mod logs
@@ -146,6 +173,10 @@ Preferred communication style: Simple, everyday language.
 - **Weatherstack API**: For weather commands.
 - **Strange API**: For image manipulation commands.
 - **Pinterest API**: Access token, app ID, and app secret for the `!pfp` command.
+
+### Free Public APIs (No Auth Required)
+- **LRCLIB API**: Primary lyrics provider (3M+ lyrics database, free, reliable).
+- **lyrics.ovh API**: Fallback lyrics provider for broader coverage.
 
 ### Key NPM Packages
 - `discord.js`: Discord API interaction.
