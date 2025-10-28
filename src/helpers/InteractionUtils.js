@@ -41,10 +41,10 @@ class InteractionUtils {
     buttons.forEach(btn => {
       const button = new ButtonBuilder()
         .setCustomId(btn.customId)
-        .setLabel(btn.label)
         .setStyle(btn.style || ButtonStyle.Primary)
         .setDisabled(btn.disabled || false);
 
+      if (btn.label) button.setLabel(btn.label);
       if (btn.emoji) button.setEmoji(btn.emoji);
       row.addComponents(button);
     });

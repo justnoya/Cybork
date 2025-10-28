@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType, ChannelType, ComponentType, ButtonStyle } = require("discord.js");
+const { ApplicationCommandOptionType, ChannelType, ComponentType, ButtonStyle, TextInputStyle } = require("discord.js");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 const InteractionUtils = require("@helpers/InteractionUtils");
 const emojis = require("@root/emojis.json");
@@ -268,7 +268,7 @@ async function handleAntiSpam(interaction, settings) {
       {
         customId: "threshold",
         label: "Message Threshold (3-10)",
-        style: 1,
+        style: TextInputStyle.Short,
         placeholder: "Messages before action",
         required: true,
         value: currentThreshold.toString(),
@@ -276,7 +276,7 @@ async function handleAntiSpam(interaction, settings) {
       {
         customId: "timeframe",
         label: "Timeframe in Seconds (3-30)",
-        style: 1,
+        style: TextInputStyle.Short,
         placeholder: "Seconds to check",
         required: true,
         value: currentTimeframe.toString(),
@@ -414,7 +414,7 @@ async function handleAntiZalgo(interaction, settings) {
       {
         customId: "threshold",
         label: "Detection Threshold % (30-90)",
-        style: 1,
+        style: TextInputStyle.Short,
         placeholder: "Detection threshold percentage",
         required: true,
         value: currentThreshold.toString(),
@@ -511,7 +511,7 @@ async function handleAntiCaps(interaction, settings) {
       {
         customId: "threshold",
         label: "Caps Threshold % (50-95)",
-        style: 1,
+        style: TextInputStyle.Short,
         placeholder: "Caps threshold percentage",
         required: true,
         value: currentThreshold.toString(),
@@ -602,7 +602,7 @@ async function handleWhitelist(interaction, settings) {
       {
         customId: "channel_id",
         label: "Channel ID",
-        style: 1,
+        style: TextInputStyle.Short,
         placeholder: "Enter channel ID to whitelist",
         required: true,
       },
@@ -647,7 +647,7 @@ async function handleWhitelist(interaction, settings) {
       {
         customId: "channel_id",
         label: "Channel ID",
-        style: 1,
+        style: TextInputStyle.Short,
         placeholder: "Enter channel ID to remove",
         required: true,
       },

@@ -14,7 +14,7 @@ const ContainerBuilder = require("@helpers/ContainerBuilder");
 module.exports = {
   name: "loggingsetup",
   description: "Interactive server logging setup with modern UI",
-  category: "ADMIN",
+  category: "LOGS",
   userPermissions: ["ManageGuild"],
   command: {
     enabled: true,
