@@ -3,6 +3,7 @@ const { OWNER_IDS, PREFIX_COMMANDS, EMBED_COLORS } = require("@root/config");
 const { parsePermissions } = require("@helpers/Utils");
 const { timeformat } = require("@helpers/Utils");
 const { getSettings } = require("@schemas/Guild");
+const { getBotConfig } = require("@schemas/BotConfig");
 
 const cooldownCache = new Map();
 
@@ -43,10 +44,11 @@ module.exports = {
       }
     }
 
-    // Owner commands - check both owners and developers
+    // Owner commands - check both owners and global access users
     if (cmd.category === "OWNER") {
-      const isDeveloper = settings.developers && settings.developers.includes(message.author.id);
-      if (!OWNER_IDS.includes(message.author.id) && !isDeveloper) {
+      const botConfig = await getBotConfig();
+      const hasGlobalAccess = botConfig.access_users && botConfig.access_users.includes(message.author.id);
+      if (!OWNER_IDS.includes(message.author.id) && !hasGlobalAccess) {
         return;
       }
     }
@@ -108,11 +110,11 @@ module.exports = {
       }
     }
 
-    // Owner commands - check both owners and developers
+    // Owner commands - check both owners and global access users
     if (cmd.category === "OWNER") {
-      const settings = await getSettings(interaction.guild);
-      const isDeveloper = settings.developers && settings.developers.includes(interaction.user.id);
-      if (!OWNER_IDS.includes(interaction.user.id) && !isDeveloper) {
+      const botConfig = await getBotConfig();
+      const hasGlobalAccess = botConfig.access_users && botConfig.access_users.includes(interaction.user.id);
+      if (!OWNER_IDS.includes(interaction.user.id) && !hasGlobalAccess) {
         return;
       }
     }

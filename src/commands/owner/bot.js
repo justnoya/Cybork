@@ -1,6 +1,6 @@
 const { EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
 const { EMBED_COLORS, OWNER_IDS } = require("@root/config");
-const { getSettings } = require("@schemas/Guild");
+const { getBotConfig } = require("@schemas/BotConfig");
 const EMOJIS = require("@helpers/EmojiConstants");
 
 /**
@@ -8,13 +8,13 @@ const EMOJIS = require("@helpers/EmojiConstants");
  */
 module.exports = {
   name: "access",
-  description: "Manage bot access users (owner only)",
+  description: "Manage bot access users globally (owner only)",
   category: "OWNER",
   botPermissions: ["EmbedLinks"],
   command: {
     enabled: true,
     aliases: ["bot"],
-    usage: "<@user|list|reset> [remove]",
+    usage: "<@user|user_id|list|reset> [remove]",
     minArgsCount: 1,
   },
   slashCommand: {
@@ -22,7 +22,7 @@ module.exports = {
     options: [
       {
         name: "add",
-        description: "Grant bot access to a user",
+        description: "Grant global bot access to a user",
         type: ApplicationCommandOptionType.Subcommand,
         options: [
           {
@@ -35,7 +35,7 @@ module.exports = {
       },
       {
         name: "remove",
-        description: "Remove bot access from a user",
+        description: "Remove global bot access from a user",
         type: ApplicationCommandOptionType.Subcommand,
         options: [
           {
@@ -48,36 +48,40 @@ module.exports = {
       },
       {
         name: "list",
-        description: "List all users with bot access",
+        description: "List all users with global bot access",
         type: ApplicationCommandOptionType.Subcommand,
       },
     ],
   },
 
   async messageRun(message, args) {
-    // Handle list command
     if (args[0].toLowerCase() === "list") {
       return await listAccessUsers(message);
     }
 
-    // Handle reset command
     if (args[0].toLowerCase() === "reset") {
       return await resetAllAccess(message);
     }
 
-    const target = message.mentions.members.first() || message.guild.members.cache.get(args[0]);
+    const target = message.mentions.users.first() || message.client.users.cache.get(args[0]);
+    let targetUser = target;
     
     if (!target) {
-      return message.safeReply("Please provide a valid user or use `list` to see all access users, or `reset` to remove all.");
+      try {
+        targetUser = await message.client.users.fetch(args[0]).catch(() => null);
+      } catch (err) {}
+    }
+    
+    if (!targetUser) {
+      return message.safeReply("Please provide a valid user mention, user ID, or use `list` to see all access users, or `reset` to remove all.");
     }
 
-    // Check if remove action
     const isRemove = args[1] && args[1].toLowerCase() === "remove";
 
     if (isRemove) {
-      return await removeAccess(message, target);
+      return await removeAccess(message, targetUser);
     } else {
-      return await grantAccess(message, target);
+      return await grantAccess(message, targetUser);
     }
   },
 
@@ -87,10 +91,10 @@ module.exports = {
     if (sub === "list") {
       return await listAccessUsers(interaction);
     } else if (sub === "add") {
-      const target = interaction.options.getMember("user");
+      const target = interaction.options.getUser("user");
       return await grantAccess(interaction, target);
     } else if (sub === "remove") {
-      const target = interaction.options.getMember("user");
+      const target = interaction.options.getUser("user");
       return await removeAccess(interaction, target);
     }
   },
@@ -98,37 +102,38 @@ module.exports = {
 
 async function grantAccess(context, target) {
   if (!target) {
-    const content = "User not found in this server.";
+    const content = "User not found.";
     return context.deferred ? context.followUp({ content, ephemeral: true }) : context.safeReply(content);
   }
 
   if (OWNER_IDS.includes(target.id)) {
-    const content = `${EMOJIS.WARN} | ${target.user.tag} is already a bot owner!`;
+    const content = `${EMOJIS.WARN} | ${target.tag} is already a bot owner!`;
     return context.deferred ? context.followUp({ content, ephemeral: true }) : context.safeReply(content);
   }
 
-  const settings = await getSettings(context.guild);
+  const config = await getBotConfig();
   
-  if (!settings.developers) settings.developers = [];
+  if (!config.access_users) config.access_users = [];
   
-  if (settings.developers.includes(target.id)) {
-    const content = `${EMOJIS.WARN} | ${target.user.tag} already has bot access!`;
+  if (config.access_users.includes(target.id)) {
+    const content = `${EMOJIS.WARN} | ${target.tag} already has global bot access!`;
     return context.deferred ? context.followUp({ content, ephemeral: true }) : context.safeReply(content);
   }
 
-  settings.developers.push(target.id);
-  await settings.save();
+  config.access_users.push(target.id);
+  await config.save();
 
   const issuer = context.user || context.author;
   const embed = new EmbedBuilder()
     .setColor(EMBED_COLORS.SUCCESS)
     .setDescription(
-      `${EMOJIS.SUCCESS} | **Bot Access Granted**\n\n` +
-      `**User:** ${target.user.tag}\n` +
+      `${EMOJIS.SUCCESS} | **Global Bot Access Granted**\n\n` +
+      `**User:** ${target.tag}\n` +
+      `**Scope:** All servers\n` +
       `**Permissions:**\n` +
-      `• Can use commands without prefix\n` +
+      `• Can use commands without prefix globally\n` +
       `• Full command access (except owner commands)\n` +
-      `• All bot features enabled`
+      `• All bot features enabled in every server`
     )
     .setTimestamp()
     .setFooter({ text: `Granted by ${issuer.tag}` });
@@ -138,26 +143,26 @@ async function grantAccess(context, target) {
 
 async function removeAccess(context, target) {
   if (!target) {
-    const content = "User not found in this server.";
+    const content = "User not found.";
     return context.deferred ? context.followUp({ content, ephemeral: true }) : context.safeReply(content);
   }
 
-  const settings = await getSettings(context.guild);
+  const config = await getBotConfig();
   
-  if (!settings.developers || !settings.developers.includes(target.id)) {
-    const content = `${EMOJIS.WARN} | ${target.user.tag} doesn't have bot access!`;
+  if (!config.access_users || !config.access_users.includes(target.id)) {
+    const content = `${EMOJIS.WARN} | ${target.tag} doesn't have global bot access!`;
     return context.deferred ? context.followUp({ content, ephemeral: true }) : context.safeReply(content);
   }
 
-  settings.developers = settings.developers.filter(id => id !== target.id);
-  await settings.save();
+  config.access_users = config.access_users.filter(id => id !== target.id);
+  await config.save();
 
   const issuer = context.user || context.author;
   const embed = new EmbedBuilder()
     .setColor(EMBED_COLORS.WARNING)
     .setDescription(
-      `${EMOJIS.SUCCESS} | **Bot Access Removed**\n\n` +
-      `**User:** ${target.user.tag}\n` +
+      `${EMOJIS.SUCCESS} | **Global Bot Access Removed**\n\n` +
+      `**User:** ${target.tag}\n` +
       `**Removed by:** ${issuer.tag}`
     )
     .setTimestamp();
@@ -166,17 +171,17 @@ async function removeAccess(context, target) {
 }
 
 async function resetAllAccess(context) {
-  const settings = await getSettings(context.guild);
-  const removedCount = settings.developers ? settings.developers.length : 0;
+  const config = await getBotConfig();
+  const removedCount = config.access_users ? config.access_users.length : 0;
   
-  settings.developers = [];
-  await settings.save();
+  config.access_users = [];
+  await config.save();
 
   const issuer = context.user || context.author;
   const embed = new EmbedBuilder()
     .setColor(EMBED_COLORS.WARNING)
     .setDescription(
-      `${EMOJIS.SUCCESS} | **All Bot Access Reset**\n\n` +
+      `${EMOJIS.SUCCESS} | **All Global Bot Access Reset**\n\n` +
       `**Removed:** ${removedCount} user(s)\n` +
       `**Reset by:** ${issuer.tag}`
     )
@@ -186,13 +191,13 @@ async function resetAllAccess(context) {
 }
 
 async function listAccessUsers(context) {
-  const settings = await getSettings(context.guild);
-  const accessUsers = settings.developers || [];
+  const config = await getBotConfig();
+  const accessUsers = config.access_users || [];
 
-  let description = `**Bot Access Users**\n\n`;
+  let description = `**🌐 Global Bot Access Users**\n\n`;
   
   if (accessUsers.length === 0) {
-    description += `${EMOJIS.WARN} No users have bot access yet.\n\n`;
+    description += `${EMOJIS.WARN} No users have global bot access yet.\n\n`;
   } else {
     description += `Total: ${accessUsers.length}\n\n`;
     for (let i = 0; i < accessUsers.length; i++) {
@@ -210,6 +215,7 @@ async function listAccessUsers(context) {
   const embed = new EmbedBuilder()
     .setColor(EMBED_COLORS.BOT_EMBED)
     .setDescription(description)
+    .setFooter({ text: "Global access works across all servers" })
     .setTimestamp();
 
   return context.deferred ? context.followUp({ embeds: [embed] }) : context.safeReply({ embeds: [embed] });

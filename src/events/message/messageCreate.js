@@ -1,6 +1,7 @@
 const { commandHandler, automodHandler, statsHandler } = require("@src/handlers");
 const { PREFIX_COMMANDS, OWNER_IDS, SUPPORT_SERVER } = require("@root/config");
 const { getSettings } = require("@schemas/Guild");
+const { getBotConfig } = require("@schemas/BotConfig");
 const {
   EmbedBuilder,
   ActionRowBuilder,
@@ -93,11 +94,13 @@ module.exports = async (client, message) => {
       return invoke;
     };
 
-    // Check for no-prefix commands (for owners and noprefix whitelisted users)
+    // Check for no-prefix commands (for owners, global access users, and global noprefix users)
     const isOwner = OWNER_IDS.includes(message.author.id);
-    const isNoPrefixUser = settings.noprefix_users && settings.noprefix_users.includes(message.author.id);
+    const botConfig = await getBotConfig();
+    const hasGlobalAccess = botConfig.access_users && botConfig.access_users.includes(message.author.id);
+    const isGlobalNoPrefixUser = botConfig.noprefix_users && botConfig.noprefix_users.includes(message.author.id);
 
-    if ((isOwner || isNoPrefixUser) && message.content && !message.content.startsWith(settings.prefix)) {
+    if ((isOwner || hasGlobalAccess || isGlobalNoPrefixUser) && message.content && !message.content.startsWith(settings.prefix)) {
       let invoke = message.content.split(/\s+/)[0];
       invoke = resolveCustomAlias(invoke);
       const cmd = client.getCommand(invoke);
