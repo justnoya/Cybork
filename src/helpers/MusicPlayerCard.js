@@ -56,7 +56,7 @@ class MusicPlayerCard {
         try {
           const response = await axios.get(thumbnail, { 
             responseType: 'arraybuffer',
-            timeout: 1500,
+            timeout: 2500,
             headers: { 'User-Agent': 'Mozilla/5.0' },
             maxRedirects: 2
           });
