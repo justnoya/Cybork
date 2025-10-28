@@ -69,10 +69,14 @@ module.exports = (client) => {
     client.logger.log(`🎵 Track started: ${trackInfo.title} in guild ${player.guildId}`);
 
     try {
-      // Generate beautiful visual card
-      const cardBuffer = await MusicPlayerCard.generateNowPlayingCard(track, player, requester);
+      // Generate beautiful visual card with timeout for speed (5 seconds)
+      const cardBuffer = await Promise.race([
+        MusicPlayerCard.generateNowPlayingCard(track, player, requester),
+        new Promise((resolve) => setTimeout(() => resolve(null), 5000))
+      ]);
       
       if (cardBuffer) {
+        client.logger.log(`✅ Generated music card successfully for: ${trackInfo.title}`);
         const attachment = new AttachmentBuilder(cardBuffer, { name: 'now-playing.png' });
         
         // Create control buttons
@@ -152,6 +156,7 @@ module.exports = (client) => {
         }
       } else {
         // Fallback to container view
+        client.logger.warn(`⚠️ Card generation timed out or failed for: ${trackInfo.title}, using fallback display`);
         const display = MusicPlayerView.createNowPlayingDisplay(player, requester, null, null);
         const loadingMessage = player.queue.data.loadingMessage;
         

@@ -157,8 +157,8 @@ async function play({ member, guild, channel }, query) {
     player.queue.data.channel = channel;
     player.connect(member.voice.channel.id, { deafened: true });
     
-    // Wait a moment for connection to establish properly
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait a brief moment for connection to establish
+    await new Promise(resolve => setTimeout(resolve, 200));
   }
 
   // do queue things

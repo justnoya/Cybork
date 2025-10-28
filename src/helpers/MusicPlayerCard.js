@@ -29,8 +29,8 @@ class MusicPlayerCard {
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, width, height);
       
-      // Add subtle noise texture
-      for (let i = 0; i < 500; i++) {
+      // Add subtle noise texture (optimized for speed)
+      for (let i = 0; i < 50; i++) {
         ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.03})`;
         ctx.fillRect(Math.random() * width, Math.random() * height, 1, 1);
       }
@@ -56,8 +56,9 @@ class MusicPlayerCard {
         try {
           const response = await axios.get(thumbnail, { 
             responseType: 'arraybuffer',
-            timeout: 5000,
-            headers: { 'User-Agent': 'Mozilla/5.0' }
+            timeout: 1500,
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+            maxRedirects: 2
           });
           const img = await loadImage(Buffer.from(response.data));
           
@@ -67,23 +68,10 @@ class MusicPlayerCard {
           ctx.drawImage(img, artX, artY, artSize, artSize);
           ctx.restore();
         } catch (err) {
-          // Fallback: gradient placeholder
-          const artGradient = ctx.createLinearGradient(artX, artY, artX + artSize, artY + artSize);
-          artGradient.addColorStop(0, '#A855F7');
-          artGradient.addColorStop(1, '#EC4899');
-          ctx.fillStyle = artGradient;
-          ctx.save();
-          this.roundRect(ctx, artX, artY, artSize, artSize, 20);
-          ctx.fill();
-          ctx.restore();
-          
-          // Music note icon
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-          ctx.font = 'bold 120px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('♪', artX + artSize / 2, artY + artSize / 2);
+          this.drawFallbackArtwork(ctx, artX, artY, artSize);
         }
+      } else {
+        this.drawFallbackArtwork(ctx, artX, artY, artSize);
       }
       
       // Reset shadow
@@ -203,6 +191,25 @@ class MusicPlayerCard {
       console.error('Error generating music card:', error);
       return null;
     }
+  }
+  
+  static drawFallbackArtwork(ctx, artX, artY, artSize) {
+    // Gradient placeholder
+    const artGradient = ctx.createLinearGradient(artX, artY, artX + artSize, artY + artSize);
+    artGradient.addColorStop(0, '#A855F7');
+    artGradient.addColorStop(1, '#EC4899');
+    ctx.fillStyle = artGradient;
+    ctx.save();
+    this.roundRect(ctx, artX, artY, artSize, artSize, 20);
+    ctx.fill();
+    ctx.restore();
+    
+    // Music note icon
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.font = 'bold 120px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('♪', artX + artSize / 2, artY + artSize / 2);
   }
   
   static drawBadge(ctx, text, x, y, color) {
