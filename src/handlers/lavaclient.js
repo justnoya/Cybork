@@ -65,6 +65,8 @@ module.exports = (client) => {
     const trackInfo = track.info || track;
     const requester = track.requester || 'Unknown User';
 
+    client.logger.log(`🎵 Track started: ${trackInfo.title} in guild ${player.guildId}`);
+
     try {
       const display = MusicPlayerView.createNowPlayingDisplay(player, requester, null, null);
       await channel.send(display);
@@ -78,6 +80,25 @@ module.exports = (client) => {
         console.error("Could not send any message to channel:", err.message);
       }
     }
+  });
+
+  lavaclient.on("trackStuck", async (player, track, thresholdMs) => {
+    client.logger.error(`⚠️ Track stuck: ${track.info?.title || track.title} (${thresholdMs}ms)`);
+    const channel = client.channels.cache.get(player.channelId);
+    if (channel) {
+      await channel.send("⚠️ Track got stuck, skipping to the next one...").catch(() => {});
+    }
+    await player.queue.next();
+  });
+
+  lavaclient.on("trackException", async (player, track, exception) => {
+    client.logger.error(`❌ Track exception: ${track.info?.title || track.title}`);
+    client.logger.error(`Exception details: ${exception.message || JSON.stringify(exception)}`);
+    const channel = client.channels.cache.get(player.channelId);
+    if (channel) {
+      await channel.send(`❌ Error playing track: ${exception.message || 'Unknown error'}. Skipping...`).catch(() => {});
+    }
+    await player.queue.next();
   });
 
   lavaclient.on("queueFinish", async (player) => {

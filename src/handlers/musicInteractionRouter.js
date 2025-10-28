@@ -276,16 +276,18 @@ module.exports = async (client) => {
       }
       
     } catch (error) {
-      client.logger.error('Music interaction error:', error);
+      client.logger.error('Music interaction error:', error.message || error);
+      client.logger.error('Error stack:', error.stack || 'No stack trace');
+      client.logger.error('Custom ID:', customId);
       
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({ 
-          content: '❌ An error occurred while processing your request', 
+          content: `❌ An error occurred: ${error.message || 'Unknown error'}`, 
           ephemeral: true 
         }).catch(() => {});
       } else if (interaction.deferred) {
         await interaction.editReply({ 
-          content: '❌ An error occurred while processing your request'
+          content: `❌ An error occurred: ${error.message || 'Unknown error'}`
         }).catch(() => {});
       }
     }
