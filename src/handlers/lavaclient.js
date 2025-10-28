@@ -123,23 +123,76 @@ module.exports = (client) => {
             .setStyle(ButtonStyle.Secondary)
         );
         
-        await channel.send({ 
-          files: [attachment],
-          components: [row1, row2]
-        });
+        // Check if there's a loading message to edit (from the play command)
+        const loadingMessage = player.queue.data.loadingMessage;
+        if (loadingMessage) {
+          try {
+            await loadingMessage.edit({ 
+              content: null,
+              files: [attachment],
+              components: [row1, row2]
+            });
+          } catch (editError) {
+            // If edit fails (message deleted, permissions, etc), send a new message
+            client.logger.warn("Failed to edit loading message, sending new:", editError.message);
+            await channel.send({ 
+              files: [attachment],
+              components: [row1, row2]
+            });
+          } finally {
+            // Always clear the loading message reference to avoid repeated edit attempts
+            delete player.queue.data.loadingMessage;
+          }
+        } else {
+          // No loading message, send a new one
+          await channel.send({ 
+            files: [attachment],
+            components: [row1, row2]
+          });
+        }
       } else {
         // Fallback to container view
         const display = MusicPlayerView.createNowPlayingDisplay(player, requester, null, null);
-        await channel.send(display);
+        const loadingMessage = player.queue.data.loadingMessage;
+        
+        if (loadingMessage) {
+          try {
+            await loadingMessage.edit(display);
+          } catch (editError) {
+            await channel.send(display);
+          } finally {
+            // Always clear the loading message reference
+            delete player.queue.data.loadingMessage;
+          }
+        } else {
+          await channel.send(display);
+        }
       }
     } catch (error) {
       client.logger.error("Failed to send now playing message:", error);
       try {
         const title = trackInfo.title || track.title || 'Unknown Track';
         const author = trackInfo.author || track.author || 'Unknown Artist';
-        await channel.send(`🎵 Now Playing: **${title}** by ${author}`);
+        const loadingMessage = player.queue.data.loadingMessage;
+        
+        if (loadingMessage) {
+          try {
+            await loadingMessage.edit({ content: `🎵 Now Playing: **${title}** by ${author}` });
+          } catch (editErr) {
+            await channel.send(`🎵 Now Playing: **${title}** by ${author}`);
+          } finally {
+            // Always clear the loading message reference
+            delete player.queue.data.loadingMessage;
+          }
+        } else {
+          await channel.send(`🎵 Now Playing: **${title}** by ${author}`);
+        }
       } catch (err) {
         console.error("Could not send any message to channel:", err.message);
+        // Clear loading message even if everything fails
+        if (player.queue.data.loadingMessage) {
+          delete player.queue.data.loadingMessage;
+        }
       }
     }
   });

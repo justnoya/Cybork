@@ -40,13 +40,13 @@ module.exports = {
   async messageRun(message, args) {
     const query = args.join(" ");
     const response = await play(message, query);
-    await message.safeReply(response);
+    if (response) await message.safeReply(response);
   },
 
   async interactionRun(interaction) {
     const query = interaction.options.getString("query");
     const response = await play(interaction, query);
-    await interaction.followUp(response);
+    if (response) await interaction.followUp(response);
   },
 };
 
@@ -61,6 +61,7 @@ async function play({ member, guild, channel }, query) {
   if (player && !guild.members.me.voice.channel) {
     player.disconnect();
     await guild.client.musicManager.destroyPlayer(guild.id);
+    player = null;
   }
 
   if (player && member.voice.channel !== guild.members.me.voice.channel) {
@@ -155,6 +156,9 @@ async function play({ member, guild, channel }, query) {
     player = guild.client.musicManager.createPlayer(guild.id);
     player.queue.data.channel = channel;
     player.connect(member.voice.channel.id, { deafened: true });
+    
+    // Wait a moment for connection to establish properly
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
 
   // do queue things
@@ -162,14 +166,21 @@ async function play({ member, guild, channel }, query) {
   const wasEmpty = !player?.queue.tracks.length;
   player.queue.add(tracks, { requester: member.user.username, next: false });
   
+  // Start playback if not already started
   if (!started) {
-    await player.queue.start();
-    
-    // The trackStart event in lavaclient.js will show the visual card automatically
-    // Return a simple confirmation message
+    // For single tracks on empty queue, send loading message that will be edited with the card
     if (wasEmpty && tracks.length === 1) {
-      return `✅ Playing now - visual card will appear shortly!`;
+      const loadingMsg = await channel.send("🎧 **Vibing...** _Loading your music_");
+      player.queue.data.loadingMessage = loadingMsg;
+      
+      await player.queue.start();
+      
+      // Return null to prevent duplicate messages
+      return null;
     }
+    
+    // For playlists or other cases, just start normally
+    await player.queue.start();
   }
 
   // Show professional enqueued card for single tracks
