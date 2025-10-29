@@ -18,6 +18,10 @@ author = "agent"
 task = "workflow.run"
 args = "Discord Bot"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Lavalink Server"
+
 [[workflows.workflow]]
 name = "Discord Bot"
 author = "agent"
@@ -38,6 +42,18 @@ mode = "sequential"
 task = "shell.exec"
 args = "npm start"
 
+[[workflows.workflow]]
+name = "Lavalink Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "java -jar Lavalink.jar"
+waitForPort = 8000
+
 [agent]
 expertMode = true
 
@@ -52,3 +68,7 @@ externalPort = 80
 [[ports]]
 localPort = 46167
 externalPort = 3001
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
