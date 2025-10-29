@@ -27,7 +27,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm start"
+args = "node bot.js"
 
 [[workflows.workflow]]
 name = "Start All Services"

@@ -64,18 +64,38 @@ class MusicPlayerView {
   static getThumbnailUrl(track) {
     const trackInfo = track.info || track;
     
+    // Check for explicit artwork URL
     if (trackInfo.artworkUrl || track.artworkUrl) {
       return trackInfo.artworkUrl || track.artworkUrl;
     }
     
+    // Check for explicit thumbnail
     if (trackInfo.thumbnail || track.thumbnail) {
       return trackInfo.thumbnail || track.thumbnail;
     }
     
-    if (trackInfo.sourceName === "youtube" || track.sourceName === "youtube") {
-      const identifier = trackInfo.identifier || track.identifier;
-      if (identifier) {
-        return `https://img.youtube.com/vi/${identifier}/maxresdefault.jpg`;
+    // Extract YouTube thumbnail from identifier
+    const sourceName = trackInfo.sourceName || track.sourceName || trackInfo.source || track.source;
+    const identifier = trackInfo.identifier || track.identifier;
+    
+    if (identifier && (sourceName === "youtube" || sourceName === "yt")) {
+      // Use hqdefault.jpg which is more reliable than maxresdefault.jpg
+      return `https://img.youtube.com/vi/${identifier}/hqdefault.jpg`;
+    }
+    
+    // Try to extract from URI as fallback
+    const uri = trackInfo.uri || track.uri;
+    if (uri && uri.includes('youtube.com/watch?v=')) {
+      const videoId = uri.split('watch?v=')[1].split('&')[0];
+      if (videoId) {
+        return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      }
+    }
+    
+    if (uri && uri.includes('youtu.be/')) {
+      const videoId = uri.split('youtu.be/')[1].split('?')[0];
+      if (videoId) {
+        return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
       }
     }
     
