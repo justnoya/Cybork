@@ -75,9 +75,37 @@ Preferred communication style: Simple, everyday language.
 ### Key NPM Packages
 - `discord.js`, `@discordjs/voice`, `mongoose`, `lavaclient`, `@lavaclient/queue`, `@lavaclient/spotify`, `discord-giveaways`, `express`, `ejs`, `express-session`, `connect-mongo`, `@vitalets/google-translate-api`, `nekos.life`, `pino`, `pino-pretty`, `sourcebin_js`, `discord-together`, `play-dl`.
 
-## Recent Changes (October 28, 2025)
+## Recent Changes
 
-### Listening Parties Feature
+### October 29, 2025 - Music Player UI Enhancements
+Rebuilt the music player interface with improved container-based displays and live status indicators:
+
+**Enhanced Music Player Display:**
+- **Now Playing Card in Container**: Visual music cards now display inside a container with controls integrated below
+- **Live Status Display**: Real-time status indicators showing Playing/Paused state, loop mode, and volume level
+- **Thumbnail Integration**: Song thumbnails properly extracted and displayed in all music views
+- **Unified Container UI**: All music commands now use consistent ContainerBuilder interface
+
+**Updated Commands:**
+- `/np` (Now Playing): Shows visual music card inside container with live status and controls
+- `/play`: Displays enhanced now playing card in container when starting playback
+- `/search`: Completely redesigned with ContainerBuilder UI for search results, track selection, and playlist displays
+- `/queue`: Already using modern container UI (no changes needed)
+
+**Technical Implementation:**
+- New `createNowPlayingWithCard()` method in MusicPlayerView for combined card+container display
+- Improved thumbnail extraction using `getThumbnailUrl()` across all displays
+- Proper container detection in search command to avoid API payload errors
+- Live status badges with emojis for playback state, loop mode, and volume
+
+**UI Improvements:**
+- Visual music cards with gradient backgrounds and album artwork
+- Status indicators with color-coded badges
+- Up Next preview showing upcoming tracks
+- Controls integrated within container for cleaner interface
+- Consistent purple accent color matching music theme
+
+### October 28, 2025 - Listening Parties Feature
 Implemented synchronized listening party system allowing multiple users to listen to music together with perfect synchronization:
 
 **Architecture:**
