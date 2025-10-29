@@ -79,6 +79,14 @@ class MusicPlayerCard {
       // Reset shadow
       ctx.shadowBlur = 0;
       
+      // Add pause overlay if paused
+      if (isPaused) {
+        this.drawPauseOverlay(ctx, artX, artY, artSize);
+      } else {
+        // Add music bars animation if playing
+        this.drawMusicBars(ctx, artX, artY, artSize);
+      }
+      
       // Info section
       const infoX = artX + artSize + 40;
       const infoWidth = width - infoX - 40;
@@ -215,6 +223,76 @@ class MusicPlayerCard {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('♪', artX + artSize / 2, artY + artSize / 2);
+  }
+  
+  static drawPauseOverlay(ctx, artX, artY, artSize) {
+    // Semi-transparent dark overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.save();
+    this.roundRect(ctx, artX, artY, artSize, artSize, 20);
+    ctx.fill();
+    ctx.restore();
+    
+    // Pause icon (two vertical bars)
+    const iconSize = 80;
+    const barWidth = 20;
+    const barHeight = 60;
+    const barGap = 20;
+    const centerX = artX + artSize / 2;
+    const centerY = artY + artSize / 2;
+    
+    ctx.fillStyle = '#FFFFFF';
+    ctx.shadowColor = '#000000';
+    ctx.shadowBlur = 10;
+    
+    // Left bar
+    this.roundRect(ctx, centerX - barGap / 2 - barWidth, centerY - barHeight / 2, barWidth, barHeight, 5);
+    ctx.fill();
+    
+    // Right bar
+    this.roundRect(ctx, centerX + barGap / 2, centerY - barHeight / 2, barWidth, barHeight, 5);
+    ctx.fill();
+    
+    ctx.shadowBlur = 0;
+  }
+  
+  static drawMusicBars(ctx, artX, artY, artSize) {
+    // Animated music bars in bottom right corner
+    const barCount = 4;
+    const barWidth = 6;
+    const barGap = 4;
+    const maxBarHeight = 30;
+    const padding = 15;
+    
+    const startX = artX + artSize - padding - (barCount * (barWidth + barGap));
+    const baseY = artY + artSize - padding;
+    
+    // Random heights for animation effect
+    const heights = [
+      Math.random() * maxBarHeight * 0.5 + maxBarHeight * 0.3,
+      Math.random() * maxBarHeight * 0.7 + maxBarHeight * 0.2,
+      Math.random() * maxBarHeight,
+      Math.random() * maxBarHeight * 0.6 + maxBarHeight * 0.3
+    ];
+    
+    for (let i = 0; i < barCount; i++) {
+      const barX = startX + i * (barWidth + barGap);
+      const barHeight = heights[i];
+      
+      // Gradient for each bar
+      const gradient = ctx.createLinearGradient(barX, baseY - barHeight, barX, baseY);
+      gradient.addColorStop(0, '#A855F7');
+      gradient.addColorStop(1, '#EC4899');
+      
+      ctx.fillStyle = gradient;
+      ctx.shadowColor = '#A855F7';
+      ctx.shadowBlur = 8;
+      
+      this.roundRect(ctx, barX, baseY - barHeight, barWidth, barHeight, 3);
+      ctx.fill();
+    }
+    
+    ctx.shadowBlur = 0;
   }
   
   static drawBadge(ctx, text, x, y, color) {
