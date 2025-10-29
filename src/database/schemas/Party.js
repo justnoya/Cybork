@@ -57,7 +57,6 @@ const PartySchema = new Schema(
   }
 );
 
-PartySchema.index({ partyId: 1 });
 PartySchema.index({ guildId: 1, status: 1 });
 PartySchema.index({ hostId: 1 });
 

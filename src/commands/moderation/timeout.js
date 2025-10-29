@@ -14,7 +14,7 @@ module.exports = {
   userPermissions: ["ModerateMembers"],
   command: {
     enabled: true,
-    aliases: ["mute"],
+    aliases: [],
     usage: "<ID|@member> <duration> [reason]",
     minArgsCount: 2,
   },

@@ -29,7 +29,7 @@ module.exports = {
   userPermissions: ["ViewAuditLog"],
   command: {
     enabled: true,
-    aliases: ["auditlog", "logs", "auditlogs"],
+    aliases: ["auditlog", "auditlogs"],
     usage: "[action_type] [limit]",
   },
   slashCommand: {
