@@ -1,7 +1,6 @@
 lavalink:
-    plugins: null
     server:
-        bufferDurationMs: 400
+        bufferDurationMs: 800
         filters:
             channelMix: true
             distortion: true
@@ -13,13 +12,13 @@ lavalink:
             tremolo: true
             vibrato: true
             volume: true
-        frameBufferDurationMs: 5000
+        frameBufferDurationMs: 10000
         gc-warnings: true
-        nonAllocatingFrameBuffer: false
+        nonAllocatingFrameBuffer: true
         opusEncodingQuality: 10
         password: abcd
-        playerUpdateInterval: 5
-        resamplingQuality: LOW
+        playerUpdateInterval: 3
+        resamplingQuality: HIGH
         soundcloudSearchEnabled: true
         sources:
             bandcamp: true
@@ -36,7 +35,7 @@ lavalink:
             socketTimeoutMs: 3000
         trackStuckThresholdMs: 10000
         useSeekGhosting: true
-        youtubePlaylistLoadLimit: 6
+        youtubePlaylistLoadLimit: 100
         youtubeSearchEnabled: true
 logging:
     file:
@@ -59,7 +58,6 @@ metrics:
     prometheus:
         enabled: true
         endpoint: /metrics
-plugins: null
 sentry:
     dsn: ""
     environment: ""
