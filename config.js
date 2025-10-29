@@ -111,7 +111,7 @@ module.exports = {
     TYPE: "STREAMING", // Status type for the bot [ CUSTOM | PLAYING | LISTENING | WATCHING | COMPETING | STREAMING ]
     // Your bot status message (note: in custom status type you won't have "Playing", "Listening", "Competing" prefix)
     MESSAGE: "streaming to unstoppable.", // Use a space for streaming status
-    URL: "https://twitch.tv/riotgames", // Required for STREAMING type (must be a valid Twitch URL)
+    URL: "https://twitch.tv/blackbitstudios", // Required for STREAMING type (must be a valid Twitch URL)
   },
 
   STATS: {
