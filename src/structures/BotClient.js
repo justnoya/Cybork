@@ -13,7 +13,7 @@ const { recursiveReadDirSync } = require("../helpers/Utils");
 const { validateCommand, validateContext } = require("../helpers/Validator");
 const { schemas } = require("@src/database/mongoose");
 const CommandCategory = require("./CommandCategory");
-const lavaclient = require("../handlers/lavaclient");
+const riffyHandler = require("../handlers/riffy");
 const giveawaysHandler = require("../handlers/giveaway");
 const { DiscordTogether } = require("discord-together");
 const EmojiManager = require("../helpers/EmojiManager");
@@ -67,8 +67,8 @@ module.exports = class BotClient extends Client {
       ? new WebhookClient({ url: process.env.JOIN_LEAVE_LOGS })
       : undefined;
 
-    // Music Player
-    if (this.config.MUSIC.ENABLED) this.musicManager = lavaclient(this);
+    // Music Player (using Riffy)
+    if (this.config.MUSIC.ENABLED) this.musicManager = riffyHandler(this);
 
     // Giveaways
     if (this.config.GIVEAWAYS.ENABLED) this.giveawaysManager = giveawaysHandler(this);
@@ -367,8 +367,8 @@ module.exports = class BotClient extends Client {
    */
   initMusicManager() {
     if (!this.musicManager) {
-      const lavaclient = require("@handlers/lavaclient");
-      this.musicManager = lavaclient(this);
+      const riffyHandler = require("@handlers/riffy");
+      this.musicManager = riffyHandler(this);
     }
   }
 
