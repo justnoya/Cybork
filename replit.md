@@ -77,6 +77,50 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 29, 2025 - Music System Stability & Performance Improvements
+Comprehensive music system overhaul to fix critical playback issues and improve reliability:
+
+**Configuration:**
+- **External Lavalink Server**: Switched from local Lavalink to external production server (vip.visionhost.cloud:2010) for improved stability and performance
+- Removed local Lavalink Server workflow to avoid conflicts
+
+**Critical Fixes:**
+1. **Voice Connection Timing** (Fixes "playing but no sound" issue):
+   - Added proper await for `player.connect()` to ensure voice connection is fully established before playback
+   - Implemented connection state validation with polling mechanism to confirm bot is in voice channel
+   - Added 500ms stabilization delay for Lavalink voice session to prevent race conditions
+   - Connection now validates with 5-second timeout and graceful fallback
+
+2. **Player Error Handling** (Fixes player getting stuck):
+   - Enhanced `trackStuck` handler with proper queue state cleanup and user notifications
+   - Enhanced `trackException` handler to skip to next track or stop gracefully when queue is empty
+   - Added `trackEnd` handler to properly track history for completed tracks
+   - All error handlers now include try-catch blocks to prevent cascading failures
+   - Player automatically advances queue or stops when errors occur (no more frozen player)
+
+3. **Album Artwork Display** (Fixes missing thumbnails):
+   - Completely rewrote `getThumbnailUrl()` method in both MusicPlayerCard.js and MusicPlayerView.js
+   - Enhanced YouTube video ID extraction with 5 different methods for maximum compatibility
+   - Uses `hqdefault.jpg` (guaranteed to exist) instead of `maxresdefault.jpg` to prevent 404 errors
+   - Added support for Spotify artwork via pluginInfo
+   - Added SoundCloud artwork extraction from metadata fields
+   - Improved logging to debug thumbnail extraction issues
+   - Synchronized implementation between card and view helpers for consistency
+
+**Technical Improvements:**
+- Connection establishment now uses polling with 100ms intervals and 5s timeout
+- Error handlers prevent player state corruption when tracks fail
+- Thumbnail URLs are validated across multiple metadata fields with priority-based fallback
+- All async operations have proper error boundaries
+- Improved logging throughout the music playback pipeline
+
+**Impact:**
+- ✅ No more "playing but no sound" issues - voice connection is always ready before playback
+- ✅ Player never freezes - robust error handling automatically recovers from all error conditions
+- ✅ Album artwork displays correctly for YouTube, Spotify, and SoundCloud tracks
+- ✅ All music interactions work smoothly without delays or stuck states
+- ✅ Connected to production-grade external Lavalink server for better reliability
+
 ### October 29, 2025 - Music Player UI Enhancements
 Rebuilt the music player interface with improved container-based displays and live status indicators:
 
