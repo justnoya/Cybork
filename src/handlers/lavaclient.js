@@ -70,6 +70,13 @@ module.exports = (client) => {
     const requester = track.requester || 'Unknown User';
 
     client.logger.log(`🎵 Track started: ${trackInfo.title} in guild ${player.guildId}`);
+    
+    // Skip sending card if play command already showed it
+    if (player.queue.data.cardShownByPlayCommand) {
+      client.logger.log(`⏭️ Skipping trackStart card - already shown by play command`);
+      delete player.queue.data.cardShownByPlayCommand;
+      return;
+    }
 
     try {
       // Generate beautiful visual card with timeout for speed (7 seconds - increased for reliability)
@@ -134,82 +141,27 @@ module.exports = (client) => {
             .setStyle(ButtonStyle.Secondary)
         );
         
-        // Check if there's a loading message to edit (from the play command)
-        const loadingMessage = player.queue.data.loadingMessage;
-        if (loadingMessage) {
-          try {
-            client.logger.log(`📝 Editing loading message with music card`);
-            await loadingMessage.edit({ 
-              content: null,
-              files: [attachment],
-              components: [row1, row2]
-            });
-            client.logger.log(`✅ Successfully edited message with music card`);
-          } catch (editError) {
-            // If edit fails (message deleted, permissions, etc), send a new message
-            client.logger.warn(`⚠️ Failed to edit loading message: ${editError.message}, sending new message`);
-            await channel.send({ 
-              files: [attachment],
-              components: [row1, row2]
-            });
-            client.logger.log(`✅ Sent new message with music card`);
-          } finally {
-            // Always clear the loading message reference to avoid repeated edit attempts
-            delete player.queue.data.loadingMessage;
-          }
-        } else {
-          // No loading message, send a new one
-          client.logger.log(`📤 Sending new music card message`);
-          await channel.send({ 
-            files: [attachment],
-            components: [row1, row2]
-          });
-          client.logger.log(`✅ Sent music card successfully`);
-        }
+        // Send the music card
+        client.logger.log(`📤 Sending music card message`);
+        await channel.send({ 
+          files: [attachment],
+          components: [row1, row2]
+        });
+        client.logger.log(`✅ Sent music card successfully`);
       } else {
         // Fallback to container view
         client.logger.warn(`⚠️ Card generation timed out or failed for: ${trackInfo.title}, using fallback display`);
         const display = MusicPlayerView.createNowPlayingDisplay(player, requester, null, null);
-        const loadingMessage = player.queue.data.loadingMessage;
-        
-        if (loadingMessage) {
-          try {
-            await loadingMessage.edit(display);
-          } catch (editError) {
-            await channel.send(display);
-          } finally {
-            // Always clear the loading message reference
-            delete player.queue.data.loadingMessage;
-          }
-        } else {
-          await channel.send(display);
-        }
+        await channel.send(display);
       }
     } catch (error) {
       client.logger.error("Failed to send now playing message:", error);
       try {
         const title = trackInfo.title || track.title || 'Unknown Track';
         const author = trackInfo.author || track.author || 'Unknown Artist';
-        const loadingMessage = player.queue.data.loadingMessage;
-        
-        if (loadingMessage) {
-          try {
-            await loadingMessage.edit({ content: `🎵 Now Playing: **${title}** by ${author}` });
-          } catch (editErr) {
-            await channel.send(`🎵 Now Playing: **${title}** by ${author}`);
-          } finally {
-            // Always clear the loading message reference
-            delete player.queue.data.loadingMessage;
-          }
-        } else {
-          await channel.send(`🎵 Now Playing: **${title}** by ${author}`);
-        }
+        await channel.send(`🎵 Now Playing: **${title}** by ${author}`);
       } catch (err) {
         console.error("Could not send any message to channel:", err.message);
-        // Clear loading message even if everything fails
-        if (player.queue.data.loadingMessage) {
-          delete player.queue.data.loadingMessage;
-        }
       }
     }
   });

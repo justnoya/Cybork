@@ -168,22 +168,91 @@ async function play({ member, guild, channel }, query) {
   
   // Start playback if not already started
   if (!started) {
-    // For single tracks on empty queue, send loading message that will be edited with the card
-    if (wasEmpty && tracks.length === 1) {
-      const loadingMsg = await channel.send("🎧 **Vibing...** _Loading your music_");
-      player.queue.data.loadingMessage = loadingMsg;
-      
-      await player.queue.start();
-      
-      // Return null to prevent duplicate messages
-      return null;
-    }
-    
-    // For playlists or other cases, just start normally
     await player.queue.start();
+    
+    // For single tracks, show visual now playing card immediately
+    if (tracks.length === 1) {
+      // Wait briefly for track to start
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const track = tracks[0];
+      
+      try {
+        // Generate beautiful visual card
+        const cardBuffer = await Promise.race([
+          MusicPlayerCard.generateNowPlayingCard(track, player, member.user.username),
+          new Promise((resolve) => setTimeout(() => resolve(null), 7000))
+        ]);
+        
+        if (cardBuffer) {
+          const attachment = new AttachmentBuilder(cardBuffer, { name: 'now-playing.png' });
+          
+          // Create control buttons
+          const row1 = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId('music_queue_view')
+              .setLabel('Queue')
+              .setEmoji('📋')
+              .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+              .setCustomId('music_previous')
+              .setEmoji('⏮️')
+              .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+              .setCustomId(player.paused ? 'music_resume' : 'music_pause')
+              .setEmoji(player.paused ? '▶️' : '⏸️')
+              .setStyle(player.paused ? ButtonStyle.Success : ButtonStyle.Primary),
+            new ButtonBuilder()
+              .setCustomId('music_next')
+              .setEmoji('⏭️')
+              .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+              .setCustomId('music_stop')
+              .setEmoji('⏹️')
+              .setStyle(ButtonStyle.Danger)
+          );
+          
+          const row2 = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId('music_shuffle')
+              .setEmoji('🔀')
+              .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+              .setCustomId('music_loop')
+              .setEmoji('🔁')
+              .setStyle((player.queue.loop || 0) > 0 ? ButtonStyle.Success : ButtonStyle.Secondary),
+            new ButtonBuilder()
+              .setCustomId('music_voldown')
+              .setLabel('Vol -')
+              .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+              .setCustomId('music_volup')
+              .setLabel('Vol +')
+              .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+              .setCustomId('music_history')
+              .setEmoji('🕐')
+              .setStyle(ButtonStyle.Secondary)
+          );
+          
+          // Mark that we've already shown the card so trackStart won't send another
+          player.queue.data.cardShownByPlayCommand = true;
+          
+          return {
+            files: [attachment],
+            components: [row1, row2]
+          };
+        }
+      } catch (error) {
+        guild.client.logger.error('Error generating play card:', error.message);
+      }
+      
+      // Fallback to enqueued card if visual card fails
+      return MusicPlayerView.createEnqueuedCard(track, member.user.username, null, 0);
+    }
   }
 
-  // Show professional enqueued card for single tracks
+  // Show professional enqueued card for tracks added to existing queue
   if (tracks.length === 1) {
     const track = tracks[0];
     const position = player?.queue?.tracks?.length > 0 ? player.queue.tracks.length : null;
