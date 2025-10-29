@@ -428,8 +428,8 @@ class MusicPlayerCard {
       }
       
       if (videoId && videoId.length === 11) {
-        // Use maxresdefault for best quality (falls back to default if not available)
-        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+        // Use hqdefault which is guaranteed to exist for all videos
+        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
         console.log('✅ [Thumbnail] Generated YouTube thumbnail:', thumbnailUrl);
         return thumbnailUrl;
       } else {

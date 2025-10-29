@@ -125,7 +125,8 @@ class MusicPlayerView {
       }
       
       if (videoId && videoId.length === 11) {
-        return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+        // Use hqdefault which is guaranteed to exist for all videos
+        return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
       }
     }
     
