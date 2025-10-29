@@ -35,12 +35,12 @@ module.exports = {
 async function nowPlaying({ client, guildId, member, author }) {
   const player = client.musicManager.getPlayer(guildId);
   
-  if (!player || !player.queue.current) {
+  if (!player || !player.current) {
     return MusicPlayerView.createEmptyQueueDisplay();
   }
 
-  const track = player.queue.current;
-  const requester = track.requester ? `${track.requester}` : (member?.user?.username ? `${member.user.username}` : (author ? `${author.username}` : "User"));
+  const track = player.current;
+  const requester = track.requester?.username || track.requester || (member?.user?.username ? `${member.user.username}` : (author ? `${author.username}` : "User"));
   
   // Generate beautiful visual card with timeout
   try {

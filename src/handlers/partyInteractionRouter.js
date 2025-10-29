@@ -1,5 +1,82 @@
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 
+async function handlePartyJoinButton(client, interaction, partyId) {
+  await interaction.deferReply({ ephemeral: true });
+
+  const party = await client.partyManager.getParty(partyId);
+  if (!party) {
+    return interaction.editReply("🚫 This party has ended or doesn't exist!");
+  }
+
+  const member = interaction.member;
+
+  // Check if already in party
+  const isMember = party.members.some((m) => m.userId === member.id);
+  if (isMember) {
+    return interaction.editReply("✅ You're already in this party!");
+  }
+
+  // Check if member is in a voice channel
+  if (!member.voice.channel) {
+    return interaction.editReply("🚫 You need to join a voice channel first!");
+  }
+
+  // Check if party is full
+  if (party.settings.maxMembers > 0 && party.members.length >= party.settings.maxMembers) {
+    return interaction.editReply(`🚫 This party is full! (${party.members.length}/${party.settings.maxMembers})`);
+  }
+
+  // CRITICAL FIX: Verify member is in the party's voice channel (don't move the party to their channel!)
+  if (!party.voiceChannelId) {
+    return interaction.editReply("🚫 This party doesn't have an active voice channel!");
+  }
+
+  if (member.voice.channelId !== party.voiceChannelId) {
+    // Get the party's voice channel to show in error message
+    const partyVoiceChannel = await client.channels.fetch(party.voiceChannelId).catch(() => null);
+    const channelName = partyVoiceChannel ? partyVoiceChannel.name : "the party's voice channel";
+    
+    return interaction.editReply(
+      `🚫 You must join **${channelName}** to join this party!\n\n` +
+      `The party is already active in that channel. Join the channel first, then click Join again.`
+    );
+  }
+
+  try {
+    // Join the party (without reconnecting - they're already in the right channel)
+    const result = await client.partyManager.joinParty(party.partyId, member.user, null);
+    
+    if (!result.success) {
+      return interaction.editReply(`🚫 ${result.message}`);
+    }
+
+    const components = [];
+    
+    components.push(ContainerBuilder.createTextDisplay(
+      `# 🎉 Joined Party!\n\n` +
+      `### 🎵 ${party.name}\n` +
+      `You've successfully joined the listening party!`
+    ));
+    
+    components.push(ContainerBuilder.createSeparator());
+    
+    components.push(ContainerBuilder.createTextDisplay(
+      `**👥 Members:** ${party.members.length + 1}${party.settings.maxMembers > 0 ? ` / ${party.settings.maxMembers}` : ""}\n` +
+      `**📍 Voice Channel:** ${member.voice.channel.name}\n` +
+      `**🎤 Host:** @${party.hostUsername}`
+    ));
+    
+    const container = new ContainerBuilder()
+      .addContainer({ accentColor: 0x10B981, components })
+      .build();
+    
+    return interaction.editReply(container);
+  } catch (error) {
+    client.logger.error("Failed to join party:", error);
+    return interaction.editReply("❌ Failed to join the party. Please try again.");
+  }
+}
+
 async function handlePartySkipButton(client, interaction, partyId) {
   await interaction.deferReply({ ephemeral: true });
 
@@ -128,6 +205,10 @@ async function handlePartyQueueButton(client, interaction, partyId) {
 
 module.exports = {
   init(client) {
+    client.interactionRouter.registerComponent("party", "join", async (interaction, data) => {
+      await handlePartyJoinButton(client, interaction, data);
+    });
+
     client.interactionRouter.registerComponent("party", "skip", async (interaction, data) => {
       await handlePartySkipButton(client, interaction, data);
     });

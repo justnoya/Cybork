@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType } = require("discord.js");
+const { ApplicationCommandOptionType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 
 module.exports = {
@@ -85,41 +85,50 @@ async function createParty(member, guild, channel, partyName, options = {}) {
 
     await client.partyManager.connectToVoice(party.partyId, member.voice.channel);
 
-    const components = [];
-    
-    components.push(ContainerBuilder.createTextDisplay(
-      `# 🎉 Listening Party Created!`
-    ));
-    
-    components.push(ContainerBuilder.createTextDisplay(
-      `### 🎵 ${party.name}\n` +
-      `**Party ID:** \`${party.partyId}\`\n` +
-      `**Host:** @${member.user.username}`
-    ));
-    
-    components.push(ContainerBuilder.createSeparator());
-    
-    components.push(ContainerBuilder.createTextDisplay(
-      `**📍 Voice Channel:** ${member.voice.channel.name}\n` +
-      `**👥 Members:** ${party.members.length}\n` +
-      `**🗳️ Vote Skip:** ${party.settings.voteSkipPercentage}%\n` +
-      `**🎯 Max Members:** ${party.settings.maxMembers || 'Unlimited'}`
-    ));
-    
-    components.push(ContainerBuilder.createSeparator());
-    
-    components.push(ContainerBuilder.createTextDisplay(
-      `### ✨ How to Join\n` +
-      `> Others can join with: \`/party-join ${party.partyId}\`\n` +
-      `> Or use: \`!party-join ${party.partyId}\`\n\n` +
-      `**🎵 Start playing music** with \`/play\` and everyone in the party will hear it synchronized!`
-    ));
+    // Create a beautiful party invitation embed similar to game invitations
+    const embed = new EmbedBuilder()
+      .setColor(0x5865F2) // Discord blurple color
+      .setTitle('🎉 PARTY INVITATION')
+      .setDescription(
+        `### 🎵 ${party.name}\n\n` +
+        `**${member.user.username}** invites you to join their listening party!\n\n` +
+        `Listen to music together in perfect sync with your friends.`
+      )
+      .addFields(
+        {
+          name: '📍 Voice Channel',
+          value: member.voice.channel.name,
+          inline: true
+        },
+        {
+          name: '👥 Members',
+          value: `${party.members.length}`,
+          inline: true
+        },
+        {
+          name: '🗳️ Vote Skip',
+          value: `${party.settings.voteSkipPercentage}%`,
+          inline: true
+        }
+      )
+      .setFooter({ 
+        text: `Party ID: ${party.partyId} • Join now to start listening together!` 
+      })
+      .setTimestamp();
 
-    const container = new ContainerBuilder()
-      .addContainer({ accentColor: 0x8B5CF6, components })
-      .build();
+    // Create Join button (like the "Play" button in game invitations)
+    const joinButton = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`party_join:${party.partyId}`)
+        .setLabel('Join')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('🎵')
+    );
 
-    return container;
+    return {
+      embeds: [embed],
+      components: [joinButton]
+    };
   } catch (error) {
     client.logger.error("Failed to create party:", error);
     return "❌ Failed to create listening party. Please try again.";

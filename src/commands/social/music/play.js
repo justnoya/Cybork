@@ -1,7 +1,6 @@
 const { EmbedBuilder, ApplicationCommandOptionType, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const prettyMs = require("pretty-ms");
 const { EMBED_COLORS, MUSIC } = require("@root/config");
-const { SpotifyItemType } = require("@lavaclient/spotify");
 const MusicPlayerView = require("@helpers/MusicPlayerView");
 const MusicPlayerCard = require("@helpers/MusicPlayerCard");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
@@ -59,110 +58,71 @@ async function play({ member, guild, channel }, query) {
 
   let player = guild.client.musicManager.getPlayer(guild.id);
   if (player && !guild.members.me.voice.channel) {
-    player.disconnect();
+    await player.disconnect();
     await guild.client.musicManager.destroyPlayer(guild.id);
     player = null;
   }
 
-  if (player && member.voice.channel !== guild.members.me.voice.channel) {
+  if (player && member.voice.channel.id !== guild.members.me.voice.channel?.id) {
     return "🚫 You must be in the same voice channel as mine";
   }
 
-  let embed = new EmbedBuilder().setColor(EMBED_COLORS.BOT_EMBED);
-  let tracks;
+  let tracks = [];
   let description = "";
 
   try {
-    if (guild.client.musicManager.spotify.isSpotifyUrl(query)) {
-      if (!process.env.SPOTIFY_CLIENT_ID || !process.env.SPOTIFY_CLIENT_SECRET) {
-        return "🚫 Spotify songs cannot be played. Please contact the bot owner";
+    // Use Riffy's resolve method to handle all platforms including Spotify
+    const resolve = await guild.client.musicManager.resolve({
+      query: /^https?:\/\//.test(query) ? query : `${search_prefix[MUSIC.DEFAULT_SOURCE]}:${query}`,
+      requester: member.user
+    });
+
+    const { loadType, tracks: resolvedTracks, playlistInfo } = resolve;
+
+    // Handle Lavalink v4 load types
+    if (loadType === "error" || loadType === "empty") {
+      guild.client.logger.error("Search error", resolve);
+      return "🚫 There was an error while searching";
+    }
+
+    if (loadType === "playlist") {
+      tracks = resolvedTracks;
+      description = playlistInfo?.name || "Playlist";
+    } else if (loadType === "search" || loadType === "track") {
+      if (!resolvedTracks || resolvedTracks.length === 0) {
+        return `No results found matching ${query}`;
       }
-
-      const item = await guild.client.musicManager.spotify.load(query);
-      switch (item?.type) {
-        case SpotifyItemType.Track: {
-          const track = await item.resolveYoutubeTrack();
-          tracks = [track];
-          description = `[${track.info.title}](${track.info.uri})`;
-          break;
-        }
-
-        case SpotifyItemType.Artist:
-          tracks = await item.resolveYoutubeTracks();
-          description = `Artist: [**${item.name}**](${query})`;
-          break;
-
-        case SpotifyItemType.Album:
-          tracks = await item.resolveYoutubeTracks();
-          description = `Album: [**${item.name}**](${query})`;
-          break;
-
-        case SpotifyItemType.Playlist:
-          tracks = await item.resolveYoutubeTracks();
-          description = `Playlist: [**${item.name}**](${query})`;
-          break;
-
-        default:
-          return "🚫 An error occurred while searching for the song";
-      }
-
-      if (!tracks) guild.client.logger.debug({ query, item });
+      tracks = [resolvedTracks[0]];
     } else {
-      // Get the first available node's REST API
-      const node = guild.client.musicManager.nodes.values().next().value;
-      if (!node || !node.rest) {
-        return "🚫 Music system is not available. Please try again later.";
-      }
+      return `No results found matching ${query}`;
+    }
 
-      const res = await node.rest.loadTracks(
-        /^https?:\/\//.test(query) ? query : `${search_prefix[MUSIC.DEFAULT_SOURCE]}:${query}`
-      );
-      switch (res.loadType) {
-        case "LOAD_FAILED":
-          guild.client.logger.error("Search Exception", res.exception);
-          return "🚫 There was an error while searching";
-
-        case "NO_MATCHES":
-          return `No results found matching ${query}`;
-
-        case "PLAYLIST_LOADED":
-          tracks = res.tracks;
-          description = res.playlistInfo.name;
-          break;
-
-        case "TRACK_LOADED":
-        case "SEARCH_RESULT": {
-          const [track] = res.tracks;
-          tracks = [track];
-          break;
-        }
-
-        default:
-          guild.client.logger.debug("Unknown loadType", res);
-          return "🚫 An error occurred while searching for the song";
-      }
-
-      if (!tracks) guild.client.logger.debug({ query, res });
+    if (!tracks || tracks.length === 0) {
+      guild.client.logger.debug({ query, resolve });
+      return "🚫 An error occurred while searching for the song";
     }
   } catch (error) {
     guild.client.logger.error("Search Exception", typeof error === "object" ? JSON.stringify(error) : error);
     return "🚫 An error occurred while searching for the song";
   }
 
-  if (!tracks) return "🚫 An error occurred while searching for the song";
-
-  // create a player and/or join the member's vc
-  if (!player?.connected) {
-    player = guild.client.musicManager.createPlayer(guild.id);
-    player.queue.data.channel = channel;
+  // Create player and/or join the member's VC
+  if (!player || !player.connected) {
+    player = guild.client.musicManager.createConnection({
+      guildId: guild.id,
+      voiceChannel: member.voice.channel.id,
+      textChannel: channel.id,
+      deaf: true
+    });
     
-    // Connect and wait for voice connection to be fully established
-    await player.connect(member.voice.channel.id, { deafened: true });
+    // Initialize player data
+    player.data = player.data || {};
     
     // Wait for connection to be ready (prevents "playing but no sound" issue)
     await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('Voice connection timeout'));
+        guild.client.logger.warn('Voice connection took longer than expected, proceeding anyway');
+        resolve();
       }, 5000);
       
       const checkConnection = setInterval(() => {
@@ -172,23 +132,24 @@ async function play({ member, guild, channel }, query) {
           resolve();
         }
       }, 100);
-    }).catch(() => {
-      // If connection times out, still try to proceed
-      guild.client.logger.warn('Voice connection took longer than expected, proceeding anyway');
     });
     
     // Additional brief wait for Lavalink voice session to stabilize
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 
-  // do queue things
-  const started = player.playing || player.paused;
-  const wasEmpty = !player?.queue.tracks.length;
-  player.queue.add(tracks, { requester: member.user.username, next: false });
+  // Check if player is already playing
+  const wasPlaying = player.playing || player.paused;
+  const wasEmpty = !player.queue || player.queue.length === 0;
+
+  // Add tracks to queue
+  for (const track of tracks) {
+    player.queue.add(track);
+  }
   
   // Start playback if not already started
-  if (!started) {
-    await player.queue.start();
+  if (!wasPlaying) {
+    await player.play();
     
     // For single tracks, show visual now playing card immediately
     if (tracks.length === 1) {
@@ -211,7 +172,7 @@ async function play({ member, guild, channel }, query) {
           const containerDisplay = MusicPlayerView.createNowPlayingWithCard(player, member.user.username, cardBuffer);
           
           // Mark that we've already shown the card so trackStart won't send another
-          player.queue.data.cardShownByPlayCommand = true;
+          player.data.cardShownByPlayCommand = true;
           
           return {
             files: [attachment],
@@ -230,8 +191,8 @@ async function play({ member, guild, channel }, query) {
   // Show professional enqueued card for tracks added to existing queue
   if (tracks.length === 1) {
     const track = tracks[0];
-    const position = player?.queue?.tracks?.length > 0 ? player.queue.tracks.length : null;
-    const queueLength = player?.queue?.tracks?.length || 0;
+    const position = player.queue.length > 0 ? player.queue.length : null;
+    const queueLength = player.queue.length || 0;
     
     return MusicPlayerView.createEnqueuedCard(track, member.user.username, position, queueLength);
   } else {

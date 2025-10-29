@@ -44,13 +44,13 @@ module.exports = {
  */
 function getQueue({ client, guild, member, author }, pgNo) {
   const player = client.musicManager.getPlayer(guild.id);
-  if (!player || !player.queue.current) {
+  if (!player || !player.current) {
     return MusicPlayerView.createEmptyQueueDisplay();
   }
 
   const page = pgNo || 1;
-  const track = player.queue.current;
-  const requester = track.requester ? `${track.requester}` : (member?.user?.username ? `${member.user.username}` : (author ? `${author.username}` : "User"));
+  const track = player.current;
+  const requester = track.requester?.username || track.requester || (member?.user?.username ? `${member.user.username}` : (author ? `${author.username}` : "User"));
 
   return MusicPlayerView.createQueueDisplay(player, requester, page);
 }

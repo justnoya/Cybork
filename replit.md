@@ -77,11 +77,28 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### October 29, 2025 - Music System Stability & Performance Improvements
-Comprehensive music system overhaul to fix critical playback issues and improve reliability:
+### October 29, 2025 - Riffy Integration & Enhanced Music System
+Major upgrade to music system with Riffy client integration, enhanced Spotify support, and party invitation system:
+
+**Riffy Migration:**
+- **Migrated from Lavaclient to Riffy**: Modern Lavalink client with better stability and features
+- **Enhanced Error Handling**: Improved trackStuck and trackError handlers with automatic recovery
+- **Spotify Support**: Better Spotify artwork extraction via Lavalink plugin support
+- **Reconnection Logic**: Automatic node reconnection with configurable intervals (5s interval, 10 tries)
+- **Lavalink v4 Support**: Full support for Lavalink v4 REST API and load types
+
+**Party Invitation System:**
+- **Game-Style Invitations**: Party creation now sends beautiful invitation embeds with Join button (similar to Discord game invitations)
+- **One-Click Join**: Users can join parties by clicking the Join button on the invitation
+- **Visual Feedback**: Professional success messages when joining parties with member count and settings display
+
+**Enhanced Spotify Integration:**
+- **Artwork Display**: Improved thumbnail extraction for Spotify tracks via pluginInfo.artworkUrl
+- **Better Resolution**: Uses Lavalink's Spotify plugin for native artwork URLs
+- **Fallback System**: Multiple fallback methods for artwork retrieval (artworkUrl → thumbnail → pluginInfo → YouTube ID extraction)
 
 **Configuration:**
-- **External Lavalink Server**: Switched from local Lavalink to external production server (vip.visionhost.cloud:2010) for improved stability and performance
+- **External Lavalink Server**: Uses external production server (vip.visionhost.cloud:2010) for improved stability and performance
 - Removed local Lavalink Server workflow to avoid conflicts
 
 **Critical Fixes:**
