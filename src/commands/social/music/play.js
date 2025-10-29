@@ -155,10 +155,30 @@ async function play({ member, guild, channel }, query) {
   if (!player?.connected) {
     player = guild.client.musicManager.createPlayer(guild.id);
     player.queue.data.channel = channel;
-    player.connect(member.voice.channel.id, { deafened: true });
     
-    // Wait a brief moment for connection to establish
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Connect and wait for voice connection to be fully established
+    await player.connect(member.voice.channel.id, { deafened: true });
+    
+    // Wait for connection to be ready (prevents "playing but no sound" issue)
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Voice connection timeout'));
+      }, 5000);
+      
+      const checkConnection = setInterval(() => {
+        if (player.connected && guild.members.me.voice.channel) {
+          clearInterval(checkConnection);
+          clearTimeout(timeout);
+          resolve();
+        }
+      }, 100);
+    }).catch(() => {
+      // If connection times out, still try to proceed
+      guild.client.logger.warn('Voice connection took longer than expected, proceeding anyway');
+    });
+    
+    // Additional brief wait for Lavalink voice session to stabilize
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
 
   // do queue things
