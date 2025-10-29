@@ -124,6 +124,13 @@ Major upgrade to music system with Riffy client integration, enhanced Spotify su
    - Improved logging to debug thumbnail extraction issues
    - Synchronized implementation between card and view helpers for consistency
 
+4. **Party Join Security** (Fixes party channel hijacking):
+   - Fixed critical bug where clicking Join button would move the entire party to joiner's voice channel
+   - Now validates that user is in the party's existing voice channel before allowing them to join
+   - Prevents party disruption for host and existing members
+   - Provides clear error messages directing users to join the correct voice channel first
+   - Party connection remains stable in original channel throughout member joins
+
 **Technical Improvements:**
 - Connection establishment now uses polling with 100ms intervals and 5s timeout
 - Error handlers prevent player state corruption when tracks fail
