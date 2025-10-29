@@ -132,7 +132,7 @@ module.exports = {
     name: "Social",
     image: "https://icons.iconarchive.com/icons/dryicons/aesthetica-2/128/community-users-icon.png",
     emoji: "🫂",
-    enabled: false,
+    enabled: true,
   },
   STATS: {
     name: "Statistics",
