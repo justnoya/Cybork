@@ -335,6 +335,110 @@ class MusicPlayerView {
     return container;
   }
 
+  static createNowPlayingWithCard(player, requester, cardBuffer) {
+    const track = player.queue.current;
+    const queue = player.queue.tracks || [];
+    const volume = player.volume || 100;
+    const isPaused = player.paused;
+    const loopMode = player.queue.loop || 0;
+
+    const trackInfo = track.info || track;
+
+    const components = [];
+
+    // Add the generated card image
+    if (cardBuffer) {
+      components.push(ContainerBuilder.createThumbnail('attachment://now-playing.png'));
+    }
+
+    // Add live status indicator
+    const statusIcon = isPaused ? this.EMOJIS.PAUSE : this.EMOJIS.PLAY;
+    const loopIcon = loopMode === 1 ? this.EMOJIS.REPEAT_ONE : loopMode === 2 ? this.EMOJIS.REPEAT : '';
+    
+    const statusParts = [
+      `${statusIcon} **${isPaused ? 'Paused' : 'Playing'}**`,
+      loopIcon ? `${loopIcon} **Loop**` : null,
+      `${this.getVolumeEmoji(volume)} **${volume}%**`
+    ].filter(Boolean).join(' • ');
+
+    components.push(ContainerBuilder.createTextDisplay(statusParts));
+
+    // Add up next if queue has items
+    if (queue.length > 0) {
+      components.push(ContainerBuilder.createSeparator());
+      
+      const upNext = queue.slice(0, 2).map((t, i) => {
+        const tInfo = t.info || t;
+        const trackTitle = (tInfo.title || 'Unknown').substring(0, 40);
+        const trackDuration = this.formatDuration(tInfo.length || 0);
+        return `**${i + 1}.** ${trackTitle} \`${trackDuration}\``;
+      }).join('\n');
+
+      const moreText = queue.length > 2 ? `\n*+${queue.length - 2} more in queue*` : '';
+      
+      components.push(ContainerBuilder.createTextDisplay(
+        `### ${this.EMOJIS.QUEUE} Up Next (${queue.length})\n` +
+        upNext +
+        moreText
+      ));
+    }
+
+    const container = new ContainerBuilder()
+      .addContainer({ accentColor: this.THEME.PURPLE, components })
+      .build();
+
+    // Add controls inside the container
+    const row1 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('music_queue_view')
+        .setLabel('Queue')
+        .setEmoji(this.EMOJIS.QUEUE)
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId('music_previous')
+        .setEmoji(this.EMOJIS.PREV)
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId(isPaused ? 'music_resume' : 'music_pause')
+        .setEmoji(isPaused ? this.EMOJIS.PLAY : this.EMOJIS.PAUSE)
+        .setStyle(isPaused ? ButtonStyle.Success : ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId('music_next')
+        .setEmoji(this.EMOJIS.NEXT)
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId('music_stop')
+        .setEmoji(this.EMOJIS.STOP)
+        .setStyle(ButtonStyle.Danger)
+    );
+
+    const row2 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('music_shuffle')
+        .setEmoji(this.EMOJIS.SHUFFLE)
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId('music_loop')
+        .setEmoji(this.EMOJIS.REPEAT)
+        .setStyle(loopMode > 0 ? ButtonStyle.Success : ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId('music_voldown')
+        .setLabel('Vol -')
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId('music_volup')
+        .setLabel('Vol +')
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId('music_history')
+        .setEmoji(this.EMOJIS.CLOCK)
+        .setStyle(ButtonStyle.Secondary)
+    );
+
+    container.components.push(row1, row2);
+    return container;
+  }
+
   static createQueueDisplay(player, requester, page = 1) {
     const queue = player.queue.tracks || [];
     const track = player.queue.current;

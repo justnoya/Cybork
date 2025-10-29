@@ -7,6 +7,8 @@ const {
 } = require("discord.js");
 const prettyMs = require("pretty-ms");
 const { EMBED_COLORS, MUSIC } = require("@root/config");
+const ContainerBuilder = require("@helpers/ContainerBuilder");
+const MusicPlayerView = require("@helpers/MusicPlayerView");
 
 const search_prefix = {
   YT: "ytsearch",
@@ -100,59 +102,88 @@ async function search({ member, guild, channel }, query) {
     case "TRACK_LOADED": {
       const [track] = res.tracks;
       tracks = [track];
+      
+      // Use container UI for track loaded
+      const position = player?.queue?.tracks?.length > 0 ? player.queue.tracks.length + 1 : null;
+      const queueLength = player?.queue?.tracks?.length || 0;
+      
+      // Early return with container display before starting player
       if (!player?.playing && !player?.paused && !player?.queue.tracks.length) {
-        embed.setAuthor({ name: "Added Song to queue" });
+        // Will return container after player starts below
         break;
       }
-
-      const fields = [];
-      embed
-        .setAuthor({ name: "Added Song to queue" })
-        .setDescription(`[${track.info.title}](${track.info.uri})`)
-        .setFooter({ text: `Requested By: ${member.user.username}` });
-
-      fields.push({
-        name: "Song Duration",
-        value: "`" + prettyMs(track.info.length, { colonNotation: true }) + "`",
-        inline: true,
-      });
-
-      // if (typeof track.displayThumbnail === "function") embed.setThumbnail(track.displayThumbnail("hqdefault"));
-      if (player?.queue?.tracks?.length > 0) {
-        fields.push({
-          name: "Position in Queue",
-          value: (player.queue.tracks.length + 1).toString(),
-          inline: true,
-        });
+      
+      const trackDuration = prettyMs(track.info.length, { colonNotation: true });
+      const components = [];
+      
+      const thumbnail = MusicPlayerView.getThumbnailUrl(track);
+      if (thumbnail) {
+        components.push(ContainerBuilder.createThumbnail(thumbnail));
       }
-      embed.addFields(fields);
+      
+      components.push(ContainerBuilder.createTextDisplay(
+        `# 🎵 Added to Queue`
+      ));
+      
+      const titleLink = track.info.uri 
+        ? `[${track.info.title}](${track.info.uri})` 
+        : `**${track.info.title}**`;
+      
+      components.push(ContainerBuilder.createTextDisplay(
+        `### ${titleLink}\n*${track.info.author || 'Unknown Artist'}*`
+      ));
+      
+      components.push(ContainerBuilder.createSeparator());
+      
+      const infoText = [
+        `**Duration:** \`${trackDuration}\``,
+        position ? `**Position:** ${position}/${queueLength + 1}` : null,
+        `**Requested by:** @${member.user.username}`
+      ].filter(Boolean).join(' • ');
+      
+      components.push(ContainerBuilder.createTextDisplay(infoText));
+      
+      const container = new ContainerBuilder()
+        .addContainer({ accentColor: 0xA855F7, components })
+        .build();
+      
+      embed = container;
       break;
     }
 
     case "PLAYLIST_LOADED":
       tracks = res.tracks;
-      embed
-        .setAuthor({ name: "Added Playlist to queue" })
-        .setDescription(res.playlistInfo.name)
-        .addFields(
-          {
-            name: "Enqueued",
-            value: `${res.tracks.length} songs`,
-            inline: true,
-          },
-          {
-            name: "Playlist duration",
-            value:
-              "`" +
-              prettyMs(
-                res.tracks.map((t) => t.info.length).reduce((a, b) => a + b, 0),
-                { colonNotation: true }
-              ) +
-              "`",
-            inline: true,
-          }
-        )
-        .setFooter({ text: `Requested By: ${member.user.username}` });
+      
+      const totalDuration = prettyMs(
+        res.tracks.map((t) => t.info.length).reduce((a, b) => a + b, 0),
+        { colonNotation: true }
+      );
+      
+      const components = [];
+      
+      components.push(ContainerBuilder.createTextDisplay(
+        `# 📋 Playlist Added to Queue`
+      ));
+      
+      components.push(ContainerBuilder.createTextDisplay(
+        `### ${res.playlistInfo.name}`
+      ));
+      
+      components.push(ContainerBuilder.createSeparator());
+      
+      const playlistInfo = [
+        `**Tracks:** ${res.tracks.length}`,
+        `**Duration:** \`${totalDuration}\``,
+        `**Requested by:** @${member.user.username}`
+      ].join(' • ');
+      
+      components.push(ContainerBuilder.createTextDisplay(playlistInfo));
+      
+      const container = new ContainerBuilder()
+        .addContainer({ accentColor: 0xA855F7, components })
+        .build();
+      
+      embed = container;
       break;
 
     case "SEARCH_RESULT": {
@@ -173,13 +204,41 @@ async function search({ member, guild, channel }, query) {
           .addOptions(options)
       );
 
-      const tempEmbed = new EmbedBuilder()
-        .setColor(EMBED_COLORS.BOT_EMBED)
-        .setAuthor({ name: "Search Results" })
-        .setDescription(`Please select the songs you wish to add to queue`);
+      // Use container UI for search results
+      const searchComponents = [];
+      
+      searchComponents.push(ContainerBuilder.createTextDisplay(
+        `# 🔍 Search Results`
+      ));
+      
+      searchComponents.push(ContainerBuilder.createTextDisplay(
+        `**Found ${max} results**\n\nSelect the songs you wish to add to the queue from the menu below.`
+      ));
+      
+      searchComponents.push(ContainerBuilder.createSeparator());
+      
+      // Show preview of top 3 results
+      const previewResults = results.slice(0, 3).map((result, index) => {
+        const trackTitle = result.info.title.length > 50 ? result.info.title.slice(0, 47) + "..." : result.info.title;
+        const trackAuthor = (result.info.author || 'Unknown').substring(0, 30);
+        const duration = prettyMs(result.info.length || 0, { colonNotation: true });
+        return `**${index + 1}.** ${trackTitle}\n     ${trackAuthor} • \`${duration}\``;
+      }).join('\n\n');
+      
+      searchComponents.push(ContainerBuilder.createTextDisplay(previewResults));
+      
+      if (max > 3) {
+        searchComponents.push(ContainerBuilder.createTextDisplay(
+          `\n*+${max - 3} more results available*`
+        ));
+      }
+      
+      const searchContainer = new ContainerBuilder()
+        .addContainer({ accentColor: 0x3B82F6, components: searchComponents })
+        .build();
 
       const sentMsg = await channel.send({
-        embeds: [tempEmbed],
+        ...searchContainer,
         components: [menuRow],
       });
 
@@ -200,12 +259,64 @@ async function search({ member, guild, channel }, query) {
         // Only 1 song is selected
         if (toAdd.length === 1) {
           tracks = [toAdd[0]];
-          embed.setAuthor({ name: "Added Song to queue" });
+          
+          const selectedComponents = [];
+          const selectedTrack = toAdd[0];
+          const selectedThumbnail = MusicPlayerView.getThumbnailUrl(selectedTrack);
+          
+          if (selectedThumbnail) {
+            selectedComponents.push(ContainerBuilder.createThumbnail(selectedThumbnail));
+          }
+          
+          selectedComponents.push(ContainerBuilder.createTextDisplay(
+            `# ✅ Added to Queue`
+          ));
+          
+          const selectedTitle = selectedTrack.info.uri 
+            ? `[${selectedTrack.info.title}](${selectedTrack.info.uri})` 
+            : `**${selectedTrack.info.title}**`;
+          
+          selectedComponents.push(ContainerBuilder.createTextDisplay(
+            `### ${selectedTitle}\n*${selectedTrack.info.author || 'Unknown Artist'}*`
+          ));
+          
+          selectedComponents.push(ContainerBuilder.createSeparator());
+          
+          const selectedDuration = prettyMs(selectedTrack.info.length || 0, { colonNotation: true });
+          selectedComponents.push(ContainerBuilder.createTextDisplay(
+            `**Duration:** \`${selectedDuration}\` • **Requested by:** @${member.user.username}`
+          ));
+          
+          embed = new ContainerBuilder()
+            .addContainer({ accentColor: 0x10B981, components: selectedComponents })
+            .build();
         } else {
           tracks = toAdd;
-          embed
-            .setDescription(`🎶 Added ${toAdd.length} songs to queue`)
-            .setFooter({ text: `Requested By: ${member.user.username}` });
+          
+          const multiComponents = [];
+          
+          multiComponents.push(ContainerBuilder.createTextDisplay(
+            `# 📋 Multiple Tracks Added`
+          ));
+          
+          multiComponents.push(ContainerBuilder.createTextDisplay(
+            `**${toAdd.length} songs** added to the queue`
+          ));
+          
+          multiComponents.push(ContainerBuilder.createSeparator());
+          
+          const totalDuration = prettyMs(
+            toAdd.map((t) => t.info.length).reduce((a, b) => a + b, 0),
+            { colonNotation: true }
+          );
+          
+          multiComponents.push(ContainerBuilder.createTextDisplay(
+            `**Total Duration:** \`${totalDuration}\` • **Requested by:** @${member.user.username}`
+          ));
+          
+          embed = new ContainerBuilder()
+            .addContainer({ accentColor: 0x10B981, components: multiComponents })
+            .build();
         }
       } catch (err) {
         guild.client.logger.error("Music search error:", err);
@@ -229,5 +340,9 @@ async function search({ member, guild, channel }, query) {
     await player.queue.start();
   }
 
+  // Return container if it's a container object, otherwise return embed
+  if (embed && embed.components) {
+    return embed;
+  }
   return { embeds: [embed] };
 }

@@ -52,57 +52,12 @@ async function nowPlaying({ client, guildId, member, author }) {
     if (cardBuffer) {
       const attachment = new AttachmentBuilder(cardBuffer, { name: 'now-playing.png' });
       
-      // Create control buttons
-      const row1 = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('music_queue_view')
-          .setLabel('Queue')
-          .setEmoji('📋')
-          .setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder()
-          .setCustomId('music_previous')
-          .setEmoji('⏮️')
-          .setStyle(ButtonStyle.Primary),
-        new ButtonBuilder()
-          .setCustomId(player.paused ? 'music_resume' : 'music_pause')
-          .setEmoji(player.paused ? '▶️' : '⏸️')
-          .setStyle(player.paused ? ButtonStyle.Success : ButtonStyle.Primary),
-        new ButtonBuilder()
-          .setCustomId('music_next')
-          .setEmoji('⏭️')
-          .setStyle(ButtonStyle.Primary),
-        new ButtonBuilder()
-          .setCustomId('music_stop')
-          .setEmoji('⏹️')
-          .setStyle(ButtonStyle.Danger)
-      );
-      
-      const row2 = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('music_shuffle')
-          .setEmoji('🔀')
-          .setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder()
-          .setCustomId('music_loop')
-          .setEmoji('🔁')
-          .setStyle((player.queue.loop || 0) > 0 ? ButtonStyle.Success : ButtonStyle.Secondary),
-        new ButtonBuilder()
-          .setCustomId('music_voldown')
-          .setLabel('Vol -')
-          .setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder()
-          .setCustomId('music_volup')
-          .setLabel('Vol +')
-          .setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder()
-          .setCustomId('music_history')
-          .setEmoji('🕐')
-          .setStyle(ButtonStyle.Secondary)
-      );
+      // Use new container display with card inside
+      const containerDisplay = MusicPlayerView.createNowPlayingWithCard(player, requester, cardBuffer);
       
       return {
         files: [attachment],
-        components: [row1, row2]
+        ...containerDisplay
       };
     }
   } catch (error) {
