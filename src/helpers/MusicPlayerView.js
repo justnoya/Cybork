@@ -64,56 +64,59 @@ class MusicPlayerView {
 
   static getThumbnailUrl(track) {
     const trackInfo = track.info || track;
+    const uri = trackInfo.uri || track.uri;
+    const sourceName = trackInfo.sourceName || track.sourceName || trackInfo.source || track.source;
+    const identifier = trackInfo.identifier || track.identifier;
     
-    // Check for explicit artwork URL
+    // Check for explicit artwork URL (Lavalink v4+ or custom)
     if (trackInfo.artworkUrl || track.artworkUrl) {
       return trackInfo.artworkUrl || track.artworkUrl;
     }
     
-    // Check for explicit thumbnail
     if (trackInfo.thumbnail || track.thumbnail) {
       return trackInfo.thumbnail || track.thumbnail;
     }
     
-    // Check pluginInfo for artwork (Lavalink v4 format)
-    if (track.pluginInfo && track.pluginInfo.artworkUrl) {
-      return track.pluginInfo.artworkUrl;
+    if (track.pluginInfo?.artworkUrl || trackInfo.pluginInfo?.artworkUrl) {
+      return track.pluginInfo?.artworkUrl || trackInfo.pluginInfo?.artworkUrl;
     }
     
-    if (trackInfo.pluginInfo && trackInfo.pluginInfo.artworkUrl) {
-      return trackInfo.pluginInfo.artworkUrl;
-    }
-    
-    // Extract YouTube thumbnail from identifier
-    const sourceName = trackInfo.sourceName || track.sourceName || trackInfo.source || track.source;
-    const identifier = trackInfo.identifier || track.identifier;
-    
-    if (identifier && (sourceName === "youtube" || sourceName === "yt" || sourceName === "ytmusic")) {
-      return `https://img.youtube.com/vi/${identifier}/hqdefault.jpg`;
-    }
-    
-    // Try to extract from URI as fallback
-    const uri = trackInfo.uri || track.uri;
-    
-    // YouTube
-    if (uri && uri.includes('youtube.com/watch?v=')) {
-      const videoId = uri.split('watch?v=')[1]?.split('&')[0];
-      if (videoId) {
+    // YOUTUBE - Multiple extraction methods
+    if (sourceName === "youtube" || sourceName === "yt" || sourceName === "ytmusic" || uri?.includes('youtube.com') || uri?.includes('youtu.be')) {
+      let videoId = null;
+      
+      // Method 1: Direct identifier (for Lavalink v4)
+      if (identifier && !identifier.includes(':') && !identifier.includes('/') && identifier.length === 11) {
+        videoId = identifier;
+      }
+      
+      // Method 2: Extract from youtube.com/watch?v= URL
+      if (!videoId && uri?.includes('youtube.com/watch?v=')) {
+        videoId = uri.split('watch?v=')[1]?.split('&')[0]?.split('#')[0];
+        if (videoId && videoId.length !== 11) videoId = null;
+      }
+      
+      // Method 3: Extract from youtu.be/ short URL
+      if (!videoId && uri?.includes('youtu.be/')) {
+        videoId = uri.split('youtu.be/')[1]?.split('?')[0]?.split('#')[0];
+        if (videoId && videoId.length !== 11) videoId = null;
+      }
+      
+      // Method 4: Extract from /v/ or /embed/ URL
+      if (!videoId && uri) {
+        const vMatch = uri.match(/\/(?:v|embed)\/([a-zA-Z0-9_-]{11})/);
+        if (vMatch && vMatch[1]) {
+          videoId = vMatch[1];
+        }
+      }
+      
+      if (videoId && videoId.length === 11) {
         return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
       }
     }
     
-    if (uri && uri.includes('youtu.be/')) {
-      const videoId = uri.split('youtu.be/')[1]?.split('?')[0];
-      if (videoId) {
-        return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-      }
-    }
-    
-    // SoundCloud
-    if (uri && uri.includes('soundcloud.com') && trackInfo.artworkUrl) {
-      return trackInfo.artworkUrl;
-    }
+    // SoundCloud - Lavalink v3 doesn't provide artwork
+    // Will use fallback in card/view
     
     return null;
   }

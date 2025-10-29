@@ -347,83 +347,99 @@ class MusicPlayerCard {
   
   static getThumbnailUrl(track) {
     const trackInfo = track.info || track;
-    
-    console.log('🔍 [Thumbnail Debug] Full track object:', JSON.stringify({
-      info: trackInfo,
-      pluginInfo: track.pluginInfo,
-      artworkUrl: track.artworkUrl,
-      thumbnail: track.thumbnail
-    }, null, 2));
-    
-    // Check for explicit artwork URL
-    if (trackInfo.artworkUrl || track.artworkUrl) {
-      const artworkUrl = trackInfo.artworkUrl || track.artworkUrl;
-      console.log('✅ [Thumbnail] Using artworkUrl:', artworkUrl);
-      return artworkUrl;
-    }
-    
-    // Check for explicit thumbnail
-    if (trackInfo.thumbnail || track.thumbnail) {
-      const thumbnail = trackInfo.thumbnail || track.thumbnail;
-      console.log('✅ [Thumbnail] Using thumbnail:', thumbnail);
-      return thumbnail;
-    }
-    
-    // Check pluginInfo for artwork (Lavalink v4 format)
-    if (track.pluginInfo && track.pluginInfo.artworkUrl) {
-      console.log('✅ [Thumbnail] Using pluginInfo.artworkUrl:', track.pluginInfo.artworkUrl);
-      return track.pluginInfo.artworkUrl;
-    }
-    
-    if (trackInfo.pluginInfo && trackInfo.pluginInfo.artworkUrl) {
-      console.log('✅ [Thumbnail] Using trackInfo.pluginInfo.artworkUrl:', trackInfo.pluginInfo.artworkUrl);
-      return trackInfo.pluginInfo.artworkUrl;
-    }
-    
-    // Extract YouTube thumbnail from identifier
+    const uri = trackInfo.uri || track.uri;
     const sourceName = trackInfo.sourceName || track.sourceName || trackInfo.source || track.source;
     const identifier = trackInfo.identifier || track.identifier;
     
-    console.log('🔍 [Thumbnail] Source check:', { sourceName, identifier });
+    console.log('🔍 [Thumbnail] Analyzing:', { 
+      sourceName, 
+      uri: uri?.substring(0, 60),
+      identifier: identifier?.substring(0, 60) 
+    });
     
-    if (identifier && (sourceName === "youtube" || sourceName === "yt" || sourceName === "ytmusic")) {
-      const thumbnailUrl = `https://img.youtube.com/vi/${identifier}/hqdefault.jpg`;
-      console.log('✅ [Thumbnail] Using YouTube identifier:', thumbnailUrl);
-      return thumbnailUrl;
+    // Check for explicit artwork URL (Lavalink v4+ or custom)
+    if (trackInfo.artworkUrl || track.artworkUrl) {
+      const artworkUrl = trackInfo.artworkUrl || track.artworkUrl;
+      console.log('✅ [Thumbnail] Found artworkUrl');
+      return artworkUrl;
     }
     
-    // Try to extract from URI as fallback
-    const uri = trackInfo.uri || track.uri;
+    if (trackInfo.thumbnail || track.thumbnail) {
+      const thumbnail = trackInfo.thumbnail || track.thumbnail;
+      console.log('✅ [Thumbnail] Found thumbnail');
+      return thumbnail;
+    }
     
-    // YouTube
-    if (uri && uri.includes('youtube.com/watch?v=')) {
-      const videoId = uri.split('watch?v=')[1]?.split('&')[0];
-      if (videoId) {
-        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-        console.log('✅ [Thumbnail] Extracted from youtube.com URI:', thumbnailUrl);
-        return thumbnailUrl;
+    if (track.pluginInfo?.artworkUrl || trackInfo.pluginInfo?.artworkUrl) {
+      console.log('✅ [Thumbnail] Found pluginInfo.artworkUrl');
+      return track.pluginInfo?.artworkUrl || trackInfo.pluginInfo?.artworkUrl;
+    }
+    
+    // YOUTUBE - Multiple extraction methods
+    if (sourceName === "youtube" || sourceName === "yt" || sourceName === "ytmusic" || uri?.includes('youtube.com') || uri?.includes('youtu.be')) {
+      let videoId = null;
+      
+      // Method 1: Direct identifier (for Lavalink v4)
+      if (identifier && !identifier.includes(':') && !identifier.includes('/') && identifier.length === 11) {
+        videoId = identifier;
+        console.log('✅ [Thumbnail] YouTube ID from identifier:', videoId);
+      }
+      
+      // Method 2: Extract from youtube.com/watch?v= URL
+      if (!videoId && uri?.includes('youtube.com/watch?v=')) {
+        videoId = uri.split('watch?v=')[1]?.split('&')[0]?.split('#')[0];
+        if (videoId && videoId.length === 11) {
+          console.log('✅ [Thumbnail] YouTube ID from watch URL:', videoId);
+        }
+      }
+      
+      // Method 3: Extract from youtu.be/ short URL
+      if (!videoId && uri?.includes('youtu.be/')) {
+        videoId = uri.split('youtu.be/')[1]?.split('?')[0]?.split('#')[0];
+        if (videoId && videoId.length === 11) {
+          console.log('✅ [Thumbnail] YouTube ID from short URL:', videoId);
+        }
+      }
+      
+      // Method 4: Extract from /v/ or /embed/ URL
+      if (!videoId && uri) {
+        const vMatch = uri.match(/\/(?:v|embed)\/([a-zA-Z0-9_-]{11})/);
+        if (vMatch && vMatch[1]) {
+          videoId = vMatch[1];
+          console.log('✅ [Thumbnail] YouTube ID from embed URL:', videoId);
+        }
+      }
+      
+      if (videoId && videoId.length === 11) {
+        // Use maxresdefault for better quality, fallback to hqdefault
+        return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
       }
     }
     
-    if (uri && uri.includes('youtu.be/')) {
-      const videoId = uri.split('youtu.be/')[1]?.split('?')[0];
-      if (videoId) {
-        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-        console.log('✅ [Thumbnail] Extracted from youtu.be URI:', thumbnailUrl);
-        return thumbnailUrl;
-      }
+    // SOUNDCLOUD - Note: Lavalink v3 doesn't provide artwork
+    if (sourceName === "soundcloud" || uri?.includes('soundcloud.com')) {
+      console.log('ℹ️ [Thumbnail] SoundCloud track - artwork not available via Lavalink v3');
+      // Could potentially scrape from SoundCloud page or use their API
+      // For now, will use fallback artwork
     }
     
-    // SoundCloud - use album art if available
-    if (uri && uri.includes('soundcloud.com')) {
-      if (trackInfo.artworkUrl) {
-        console.log('✅ [Thumbnail] Using SoundCloud artwork from trackInfo');
-        return trackInfo.artworkUrl;
-      }
-    }
-    
-    console.log('⚠️ [Thumbnail] No thumbnail found for track');
+    console.log('⚠️ [Thumbnail] No thumbnail URL could be constructed');
     return null;
+  }
+
+  /**
+   * Fetch SoundCloud artwork (async helper)
+   */
+  static async fetchSoundCloudArtwork(trackUri) {
+    try {
+      const axios = require('axios');
+      // This would require SoundCloud API key - for now, return null
+      // In production, you'd use SoundCloud's resolve API
+      return null;
+    } catch (error) {
+      console.error('Failed to fetch SoundCloud artwork:', error.message);
+      return null;
+    }
   }
 }
 
