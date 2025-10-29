@@ -1,5 +1,6 @@
 const { createCanvas, loadImage, registerFont } = require('canvas');
 const axios = require('axios');
+const emojiManager = require('@helpers/EmojiManager');
 
 class MusicPlayerCard {
   static async generateNowPlayingCard(track, player, requester) {
@@ -54,12 +55,16 @@ class MusicPlayerCard {
       // Load and draw album artwork
       if (thumbnail) {
         try {
+          console.log(`📥 [Thumbnail] Attempting to load: ${thumbnail}`);
           const response = await axios.get(thumbnail, { 
             responseType: 'arraybuffer',
-            timeout: 4000,
-            headers: { 'User-Agent': 'Mozilla/5.0' },
-            maxRedirects: 3,
-            validateStatus: (status) => status === 200
+            timeout: 5000,
+            headers: { 
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8'
+            },
+            maxRedirects: 5,
+            validateStatus: (status) => status >= 200 && status < 400
           });
           const img = await loadImage(Buffer.from(response.data));
           
@@ -68,11 +73,13 @@ class MusicPlayerCard {
           ctx.clip();
           ctx.drawImage(img, artX, artY, artSize, artSize);
           ctx.restore();
+          console.log(`✅ [Thumbnail] Successfully loaded and drawn`);
         } catch (err) {
-          console.log(`Thumbnail load failed, using fallback: ${err.message}`);
+          console.log(`❌ [Thumbnail] Load failed (${err.message}), using fallback`);
           this.drawFallbackArtwork(ctx, artX, artY, artSize);
         }
       } else {
+        console.log(`ℹ️ [Thumbnail] No thumbnail URL available, using fallback artwork`);
         this.drawFallbackArtwork(ctx, artX, artY, artSize);
       }
       
@@ -92,11 +99,14 @@ class MusicPlayerCard {
       const infoWidth = width - infoX - 40;
       let currentY = 80;
       
-      // "Now Playing" label
-      ctx.fillStyle = '#8B5CF6';
-      ctx.font = 'bold 18px Arial';
+      // "Now Playing" label with enhanced styling
+      const gradient2 = ctx.createLinearGradient(infoX, currentY, infoX + 200, currentY);
+      gradient2.addColorStop(0, '#A855F7');
+      gradient2.addColorStop(1, '#EC4899');
+      ctx.fillStyle = gradient2;
+      ctx.font = 'bold 20px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('NOW PLAYING', infoX, currentY);
+      ctx.fillText('🎵 NOW PLAYING', infoX, currentY);
       currentY += 40;
       
       // Song title
@@ -172,23 +182,24 @@ class MusicPlayerCard {
       let badgeX = infoX;
       
       // Status badge (Playing/Paused)
-      const statusText = isPaused ? '⏸ Paused' : '▶ Playing';
+      const statusText = isPaused ? `${emojiManager.pause} Paused` : `${emojiManager.play} Playing`;
       const statusColor = isPaused ? '#F59E0B' : '#10B981';
       this.drawBadge(ctx, statusText, badgeX, currentY, statusColor);
       badgeX += ctx.measureText(statusText).width + 35;
       
       // Loop badge
       if (loopMode === 1) {
-        this.drawBadge(ctx, '🔂 Repeat One', badgeX, currentY, '#8B5CF6');
+        this.drawBadge(ctx, `🔂 Repeat One`, badgeX, currentY, '#8B5CF6');
         badgeX += ctx.measureText('🔂 Repeat One').width + 35;
       } else if (loopMode === 2) {
-        this.drawBadge(ctx, '🔁 Repeat All', badgeX, currentY, '#8B5CF6');
-        badgeX += ctx.measureText('🔁 Repeat All').width + 35;
+        this.drawBadge(ctx, `${emojiManager.repeat} Repeat All`, badgeX, currentY, '#8B5CF6');
+        badgeX += ctx.measureText(`${emojiManager.repeat} Repeat All`).width + 35;
       }
       
-      // Volume badge
-      const volumeEmoji = volume === 0 ? '🔇' : volume < 33 ? '🔉' : '🔊';
-      this.drawBadge(ctx, `${volumeEmoji} ${volume}%`, badgeX, currentY, '#6366F1');
+      // Volume badge with enhanced visuals
+      const volumeEmoji = volume === 0 ? emojiManager.mute : volume < 33 ? emojiManager.volume_down : emojiManager.volume_up;
+      const volumeColor = volume === 0 ? '#EF4444' : '#6366F1';
+      this.drawBadge(ctx, `${volumeEmoji} ${volume}%`, badgeX, currentY, volumeColor);
       
       // Requested by (bottom)
       ctx.fillStyle = '#7C7C7C';
@@ -337,41 +348,81 @@ class MusicPlayerCard {
   static getThumbnailUrl(track) {
     const trackInfo = track.info || track;
     
+    console.log('🔍 [Thumbnail Debug] Full track object:', JSON.stringify({
+      info: trackInfo,
+      pluginInfo: track.pluginInfo,
+      artworkUrl: track.artworkUrl,
+      thumbnail: track.thumbnail
+    }, null, 2));
+    
     // Check for explicit artwork URL
     if (trackInfo.artworkUrl || track.artworkUrl) {
-      return trackInfo.artworkUrl || track.artworkUrl;
+      const artworkUrl = trackInfo.artworkUrl || track.artworkUrl;
+      console.log('✅ [Thumbnail] Using artworkUrl:', artworkUrl);
+      return artworkUrl;
     }
     
     // Check for explicit thumbnail
     if (trackInfo.thumbnail || track.thumbnail) {
-      return trackInfo.thumbnail || track.thumbnail;
+      const thumbnail = trackInfo.thumbnail || track.thumbnail;
+      console.log('✅ [Thumbnail] Using thumbnail:', thumbnail);
+      return thumbnail;
+    }
+    
+    // Check pluginInfo for artwork (Lavalink v4 format)
+    if (track.pluginInfo && track.pluginInfo.artworkUrl) {
+      console.log('✅ [Thumbnail] Using pluginInfo.artworkUrl:', track.pluginInfo.artworkUrl);
+      return track.pluginInfo.artworkUrl;
+    }
+    
+    if (trackInfo.pluginInfo && trackInfo.pluginInfo.artworkUrl) {
+      console.log('✅ [Thumbnail] Using trackInfo.pluginInfo.artworkUrl:', trackInfo.pluginInfo.artworkUrl);
+      return trackInfo.pluginInfo.artworkUrl;
     }
     
     // Extract YouTube thumbnail from identifier
     const sourceName = trackInfo.sourceName || track.sourceName || trackInfo.source || track.source;
     const identifier = trackInfo.identifier || track.identifier;
     
-    if (identifier && (sourceName === "youtube" || sourceName === "yt")) {
-      // Use hqdefault.jpg which is more reliable than maxresdefault.jpg
-      return `https://img.youtube.com/vi/${identifier}/hqdefault.jpg`;
+    console.log('🔍 [Thumbnail] Source check:', { sourceName, identifier });
+    
+    if (identifier && (sourceName === "youtube" || sourceName === "yt" || sourceName === "ytmusic")) {
+      const thumbnailUrl = `https://img.youtube.com/vi/${identifier}/hqdefault.jpg`;
+      console.log('✅ [Thumbnail] Using YouTube identifier:', thumbnailUrl);
+      return thumbnailUrl;
     }
     
     // Try to extract from URI as fallback
     const uri = trackInfo.uri || track.uri;
+    
+    // YouTube
     if (uri && uri.includes('youtube.com/watch?v=')) {
-      const videoId = uri.split('watch?v=')[1].split('&')[0];
+      const videoId = uri.split('watch?v=')[1]?.split('&')[0];
       if (videoId) {
-        return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        console.log('✅ [Thumbnail] Extracted from youtube.com URI:', thumbnailUrl);
+        return thumbnailUrl;
       }
     }
     
     if (uri && uri.includes('youtu.be/')) {
-      const videoId = uri.split('youtu.be/')[1].split('?')[0];
+      const videoId = uri.split('youtu.be/')[1]?.split('?')[0];
       if (videoId) {
-        return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        console.log('✅ [Thumbnail] Extracted from youtu.be URI:', thumbnailUrl);
+        return thumbnailUrl;
       }
     }
     
+    // SoundCloud - use album art if available
+    if (uri && uri.includes('soundcloud.com')) {
+      if (trackInfo.artworkUrl) {
+        console.log('✅ [Thumbnail] Using SoundCloud artwork from trackInfo');
+        return trackInfo.artworkUrl;
+      }
+    }
+    
+    console.log('⚠️ [Thumbnail] No thumbnail found for track');
     return null;
   }
 }

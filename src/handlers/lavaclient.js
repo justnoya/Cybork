@@ -5,6 +5,7 @@ const { load, SpotifyItemType } = require("@lavaclient/spotify");
 const MusicPlayerView = require("@helpers/MusicPlayerView");
 const MusicPlayerCard = require("@helpers/MusicPlayerCard");
 const { addToHistory } = require("@handlers/musicInteractionRouter");
+const emojiManager = require("@helpers/EmojiManager");
 require("@lavaclient/queue/register");
 
 /**
@@ -21,9 +22,9 @@ module.exports = (client) => {
         autoResolveYoutubeTracks: false,
         loaders: [SpotifyItemType.Album, SpotifyItemType.Artist, SpotifyItemType.Playlist, SpotifyItemType.Track],
       });
-      console.log("<:success:1424072640829722745> Spotify integration connected successfully");
+      console.log(`${emojiManager.getSuccess()} Spotify integration connected successfully`);
     } catch (error) {
-      console.error("<:error:1424072711671382076> Spotify integration failed:", error.message);
+      console.error(`${emojiManager.getError()} Spotify integration failed:`, error.message);
     }
   }
 
@@ -51,11 +52,11 @@ module.exports = (client) => {
   });
 
   lavaclient.on("nodeDisconnect", (node, reason) => {
-    client.logger.warn(`⚠️ Lavalink node "${node.id}" disconnected`);
+    client.logger.warn(`${emojiManager.warning} Lavalink node "${node.id}" disconnected`);
   });
 
   lavaclient.on("nodeError", (node, error) => {
-    client.logger.error(`<:error:1424072711671382076> Lavalink node "${node.id}" error: ${error.message}`);
+    client.logger.error(`${emojiManager.getError()} Lavalink node "${node.id}" error: ${error.message}`);
   });
 
   lavaclient.on("trackStart", async (player, track) => {
@@ -69,7 +70,7 @@ module.exports = (client) => {
     const trackInfo = track.info || track;
     const requester = track.requester || 'Unknown User';
 
-    client.logger.log(`🎵 Track started: ${trackInfo.title} in guild ${player.guildId}`);
+    client.logger.log(`${emojiManager.music} Track started: ${trackInfo.title} in guild ${player.guildId}`);
     
     // Skip sending card if play command already showed it
     if (player.queue.data.cardShownByPlayCommand) {
@@ -98,34 +99,34 @@ module.exports = (client) => {
           new ButtonBuilder()
             .setCustomId('music_queue_view')
             .setLabel('Queue')
-            .setEmoji('📋')
+            .setEmoji(emojiManager.queue)
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
             .setCustomId('music_previous')
-            .setEmoji('⏮️')
+            .setEmoji(emojiManager.previous)
             .setStyle(ButtonStyle.Primary),
           new ButtonBuilder()
             .setCustomId(player.paused ? 'music_resume' : 'music_pause')
-            .setEmoji(player.paused ? '▶️' : '⏸️')
+            .setEmoji(player.paused ? emojiManager.play : emojiManager.pause)
             .setStyle(player.paused ? ButtonStyle.Success : ButtonStyle.Primary),
           new ButtonBuilder()
             .setCustomId('music_next')
-            .setEmoji('⏭️')
+            .setEmoji(emojiManager.skip)
             .setStyle(ButtonStyle.Primary),
           new ButtonBuilder()
             .setCustomId('music_stop')
-            .setEmoji('⏹️')
+            .setEmoji(emojiManager.stop)
             .setStyle(ButtonStyle.Danger)
         );
         
         const row2 = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId('music_shuffle')
-            .setEmoji('🔀')
+            .setEmoji(emojiManager.shuffle)
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
             .setCustomId('music_loop')
-            .setEmoji('🔁')
+            .setEmoji(emojiManager.repeat)
             .setStyle((player.queue.loop || 0) > 0 ? ButtonStyle.Success : ButtonStyle.Secondary),
           new ButtonBuilder()
             .setCustomId('music_voldown')
@@ -137,7 +138,7 @@ module.exports = (client) => {
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
             .setCustomId('music_history')
-            .setEmoji('🕐')
+            .setEmoji(emojiManager.clock)
             .setStyle(ButtonStyle.Secondary)
         );
         
@@ -159,7 +160,7 @@ module.exports = (client) => {
       try {
         const title = trackInfo.title || track.title || 'Unknown Track';
         const author = trackInfo.author || track.author || 'Unknown Artist';
-        await channel.send(`🎵 Now Playing: **${title}** by ${author}`);
+        await channel.send(`${emojiManager.music} Now Playing: **${title}** by ${author}`);
       } catch (err) {
         console.error("Could not send any message to channel:", err.message);
       }
@@ -167,10 +168,10 @@ module.exports = (client) => {
   });
 
   lavaclient.on("trackStuck", async (player, track, thresholdMs) => {
-    client.logger.error(`⚠️ Track stuck: ${track.info?.title || track.title} (${thresholdMs}ms)`);
+    client.logger.error(`${emojiManager.warning} Track stuck: ${track.info?.title || track.title} (${thresholdMs}ms)`);
     const channel = client.channels.cache.get(player.channelId);
     if (channel) {
-      await channel.send("⚠️ Track got stuck, skipping to the next one...").catch(() => {});
+      await channel.send(`${emojiManager.warning} Track got stuck, skipping to the next one...`).catch(() => {});
     }
     await player.queue.next();
   });

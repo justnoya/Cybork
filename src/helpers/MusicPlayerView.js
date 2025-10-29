@@ -1,48 +1,49 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 const prettyMs = require("pretty-ms");
+const emojiManager = require("@helpers/EmojiManager");
+const { EMBED_COLORS } = require("@root/config");
 
 class MusicPlayerView {
   static THEME = {
-    SPOTIFY_GREEN: 0x1DB954,
-    SPOTIFY_BLACK: 0x191414,
+    BOT_EMBED: parseInt(EMBED_COLORS.BOT_EMBED.replace('#', ''), 16),
+    ACCENT: 0x8B5CF6,
     PURPLE: 0xA855F7,
-    BLUE: 0x3B82F6,
-    CYAN: 0x06B6D4,
     GREEN: 0x10B981,
     RED: 0xEF4444,
-    ORANGE: 0xF97316,
-    PINK: 0xEC4899,
-    DARK: 0x1F2937,
-    ACCENT: 0x8B5CF6,
   };
 
-  static EMOJIS = {
-    MUSIC: '🎵',
-    CASSETTE: '📼',
-    HEADPHONES: '🎧',
-    VINYL: '💿',
-    CD: '💿',
-    SPEAKER: '🔊',
-    VOLUME_LOW: '🔉',
-    VOLUME_MED: '🔊',
-    VOLUME_MUTE: '🔇',
-    PLAY: '▶️',
-    PAUSE: '⏸️',
-    NEXT: '⏭️',
-    PREV: '⏮️',
-    STOP: '⏹️',
-    SHUFFLE: '🔀',
-    REPEAT: '🔁',
-    REPEAT_ONE: '🔂',
-    CLOCK: '🕐',
-    QUEUE: '📋',
-    STAR: '⭐',
-    FIRE: '🔥',
-    CHECK: '✅',
-    NOTES: '🎶',
-    ARROW: '→',
-  };
+  static get EMOJIS() {
+    return {
+      MUSIC: emojiManager.music,
+      CASSETTE: '📼',
+      HEADPHONES: emojiManager.headphones,
+      VINYL: '💿',
+      CD: '💿',
+      SPEAKER: emojiManager.speaker,
+      VOLUME_LOW: emojiManager.volume_down,
+      VOLUME_MED: emojiManager.volume_up,
+      VOLUME_MUTE: emojiManager.mute,
+      PLAY: emojiManager.play,
+      PAUSE: emojiManager.pause,
+      NEXT: emojiManager.skip,
+      PREV: emojiManager.previous,
+      STOP: emojiManager.stop,
+      SHUFFLE: emojiManager.shuffle,
+      REPEAT: emojiManager.repeat,
+      REPEAT_ONE: '🔂',
+      CLOCK: emojiManager.clock,
+      QUEUE: emojiManager.queue,
+      STAR: emojiManager.star,
+      FIRE: emojiManager.fire,
+      CHECK: emojiManager.check,
+      NOTES: '🎶',
+      ARROW: '→',
+      SPARKLES: emojiManager.sparkles,
+      BOLT: emojiManager.bolt,
+      EQUALIZER: emojiManager.equalizer,
+    };
+  }
 
   static getVolumeEmoji(volume = 100) {
     if (volume === 0) return this.EMOJIS.VOLUME_MUTE;
@@ -74,29 +75,44 @@ class MusicPlayerView {
       return trackInfo.thumbnail || track.thumbnail;
     }
     
+    // Check pluginInfo for artwork (Lavalink v4 format)
+    if (track.pluginInfo && track.pluginInfo.artworkUrl) {
+      return track.pluginInfo.artworkUrl;
+    }
+    
+    if (trackInfo.pluginInfo && trackInfo.pluginInfo.artworkUrl) {
+      return trackInfo.pluginInfo.artworkUrl;
+    }
+    
     // Extract YouTube thumbnail from identifier
     const sourceName = trackInfo.sourceName || track.sourceName || trackInfo.source || track.source;
     const identifier = trackInfo.identifier || track.identifier;
     
-    if (identifier && (sourceName === "youtube" || sourceName === "yt")) {
-      // Use hqdefault.jpg which is more reliable than maxresdefault.jpg
+    if (identifier && (sourceName === "youtube" || sourceName === "yt" || sourceName === "ytmusic")) {
       return `https://img.youtube.com/vi/${identifier}/hqdefault.jpg`;
     }
     
     // Try to extract from URI as fallback
     const uri = trackInfo.uri || track.uri;
+    
+    // YouTube
     if (uri && uri.includes('youtube.com/watch?v=')) {
-      const videoId = uri.split('watch?v=')[1].split('&')[0];
+      const videoId = uri.split('watch?v=')[1]?.split('&')[0];
       if (videoId) {
         return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
       }
     }
     
     if (uri && uri.includes('youtu.be/')) {
-      const videoId = uri.split('youtu.be/')[1].split('?')[0];
+      const videoId = uri.split('youtu.be/')[1]?.split('?')[0];
       if (videoId) {
         return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
       }
+    }
+    
+    // SoundCloud
+    if (uri && uri.includes('soundcloud.com') && trackInfo.artworkUrl) {
+      return trackInfo.artworkUrl;
     }
     
     return null;
@@ -146,7 +162,7 @@ class MusicPlayerView {
     components.push(ContainerBuilder.createTextDisplay(infoText));
     
     const container = new ContainerBuilder()
-      .addContainer({ accentColor: this.THEME.PURPLE, components })
+      .addContainer({ accentColor: this.THEME.BOT_EMBED, components })
       .build();
     
     return container;
@@ -171,7 +187,7 @@ class MusicPlayerView {
     ));
 
     const container = new ContainerBuilder()
-      .addContainer({ accentColor: this.THEME.DARK, components })
+      .addContainer({ accentColor: this.THEME.BOT_EMBED, components })
       .build();
 
     const row1 = new ActionRowBuilder().addComponents(
@@ -281,7 +297,7 @@ class MusicPlayerView {
     }
 
     const container = new ContainerBuilder()
-      .addContainer({ accentColor: this.THEME.PURPLE, components })
+      .addContainer({ accentColor: this.THEME.BOT_EMBED, components })
       .build();
 
     const row1 = new ActionRowBuilder().addComponents(
@@ -384,7 +400,7 @@ class MusicPlayerView {
     }
 
     const container = new ContainerBuilder()
-      .addContainer({ accentColor: this.THEME.PURPLE, components })
+      .addContainer({ accentColor: this.THEME.BOT_EMBED, components })
       .build();
 
     // Add controls inside the container
@@ -511,7 +527,7 @@ class MusicPlayerView {
     }
 
     const container = new ContainerBuilder()
-      .addContainer({ accentColor: this.THEME.BLUE, components })
+      .addContainer({ accentColor: this.THEME.BOT_EMBED, components })
       .build();
 
     const row1 = new ActionRowBuilder().addComponents(
@@ -579,7 +595,7 @@ class MusicPlayerView {
     }
 
     const container = new ContainerBuilder()
-      .addContainer({ accentColor: this.THEME.ORANGE, components })
+      .addContainer({ accentColor: this.THEME.BOT_EMBED, components })
       .build();
 
     const row1 = new ActionRowBuilder().addComponents(
