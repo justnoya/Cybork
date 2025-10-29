@@ -170,20 +170,85 @@ module.exports = (client) => {
   lavaclient.on("trackStuck", async (player, track, thresholdMs) => {
     client.logger.error(`${emojiManager.warning} Track stuck: ${track.info?.title || track.title} (${thresholdMs}ms)`);
     const channel = client.channels.cache.get(player.channelId);
-    if (channel) {
-      await channel.send(`${emojiManager.warning} Track got stuck, skipping to the next one...`).catch(() => {});
+    
+    try {
+      // Add to history before skipping
+      if (player.queue.current) {
+        addToHistory(player.guildId, player.queue.current);
+      }
+      
+      if (channel) {
+        await channel.send(`${emojiManager.warning} Track got stuck, skipping to the next one...`).catch(() => {});
+      }
+      
+      // Check if there are more tracks in queue
+      if (player.queue.tracks && player.queue.tracks.length > 0) {
+        await player.queue.next();
+      } else {
+        // No more tracks, stop player
+        await player.stop();
+        if (channel) {
+          const display = MusicPlayerView.createEmptyQueueDisplay();
+          await channel.send(display).catch(() => {});
+        }
+      }
+    } catch (error) {
+      client.logger.error('Error handling trackStuck:', error.message);
+      // Force stop if error handling fails
+      try {
+        await player.stop();
+      } catch (e) {
+        client.logger.error('Failed to stop player after trackStuck error:', e.message);
+      }
     }
-    await player.queue.next();
   });
 
   lavaclient.on("trackException", async (player, track, exception) => {
     client.logger.error(`❌ Track exception: ${track.info?.title || track.title}`);
     client.logger.error(`Exception details: ${exception.message || JSON.stringify(exception)}`);
     const channel = client.channels.cache.get(player.channelId);
-    if (channel) {
-      await channel.send(`❌ Error playing track: ${exception.message || 'Unknown error'}. Skipping...`).catch(() => {});
+    
+    try {
+      // Add to history before skipping
+      if (player.queue.current) {
+        addToHistory(player.guildId, player.queue.current);
+      }
+      
+      if (channel) {
+        await channel.send(`❌ Error playing track: ${exception.message || 'Unknown error'}. Skipping...`).catch(() => {});
+      }
+      
+      // Check if there are more tracks in queue
+      if (player.queue.tracks && player.queue.tracks.length > 0) {
+        await player.queue.next();
+      } else {
+        // No more tracks, stop player
+        await player.stop();
+        if (channel) {
+          const display = MusicPlayerView.createEmptyQueueDisplay();
+          await channel.send(display).catch(() => {});
+        }
+      }
+    } catch (error) {
+      client.logger.error('Error handling trackException:', error.message);
+      // Force stop if error handling fails
+      try {
+        await player.stop();
+      } catch (e) {
+        client.logger.error('Failed to stop player after trackException error:', e.message);
+      }
     }
-    await player.queue.next();
+  });
+
+  lavaclient.on("trackEnd", async (player, track, reason) => {
+    // Track ended normally - let queue system handle it
+    // Add to history for completed tracks
+    if (reason === "FINISHED" || reason === "finished") {
+      if (track) {
+        addToHistory(player.guildId, track);
+      }
+      client.logger.log(`✅ Track finished: ${track.info?.title || track.title}`);
+    }
   });
 
   lavaclient.on("queueFinish", async (player) => {
