@@ -60,8 +60,11 @@ module.exports = (client) => {
 
   lavaclient.on("trackStart", async (player, track) => {
     const queue = player.queue;
-    const channel = client.channels.cache.get(player.channelId);
-    if (!channel) return;
+    const channel = player.queue.data.channel || client.channels.cache.get(player.channelId);
+    if (!channel) {
+      client.logger.error(`❌ Channel not found for player in guild ${player.guildId}`);
+      return;
+    }
 
     const trackInfo = track.info || track;
     const requester = track.requester || 'Unknown User';
@@ -69,10 +72,14 @@ module.exports = (client) => {
     client.logger.log(`🎵 Track started: ${trackInfo.title} in guild ${player.guildId}`);
 
     try {
-      // Generate beautiful visual card with timeout for speed (5 seconds)
+      // Generate beautiful visual card with timeout for speed (7 seconds - increased for reliability)
+      client.logger.log(`🎨 Generating music card for: ${trackInfo.title}`);
       const cardBuffer = await Promise.race([
         MusicPlayerCard.generateNowPlayingCard(track, player, requester),
-        new Promise((resolve) => setTimeout(() => resolve(null), 5000))
+        new Promise((resolve) => setTimeout(() => {
+          client.logger.warn(`⏱️ Card generation timeout for: ${trackInfo.title}`);
+          resolve(null);
+        }, 7000))
       ]);
       
       if (cardBuffer) {
@@ -131,28 +138,33 @@ module.exports = (client) => {
         const loadingMessage = player.queue.data.loadingMessage;
         if (loadingMessage) {
           try {
+            client.logger.log(`📝 Editing loading message with music card`);
             await loadingMessage.edit({ 
               content: null,
               files: [attachment],
               components: [row1, row2]
             });
+            client.logger.log(`✅ Successfully edited message with music card`);
           } catch (editError) {
             // If edit fails (message deleted, permissions, etc), send a new message
-            client.logger.warn("Failed to edit loading message, sending new:", editError.message);
+            client.logger.warn(`⚠️ Failed to edit loading message: ${editError.message}, sending new message`);
             await channel.send({ 
               files: [attachment],
               components: [row1, row2]
             });
+            client.logger.log(`✅ Sent new message with music card`);
           } finally {
             // Always clear the loading message reference to avoid repeated edit attempts
             delete player.queue.data.loadingMessage;
           }
         } else {
           // No loading message, send a new one
+          client.logger.log(`📤 Sending new music card message`);
           await channel.send({ 
             files: [attachment],
             components: [row1, row2]
           });
+          client.logger.log(`✅ Sent music card successfully`);
         }
       } else {
         // Fallback to container view

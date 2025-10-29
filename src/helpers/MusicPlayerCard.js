@@ -56,9 +56,10 @@ class MusicPlayerCard {
         try {
           const response = await axios.get(thumbnail, { 
             responseType: 'arraybuffer',
-            timeout: 2500,
+            timeout: 4000,
             headers: { 'User-Agent': 'Mozilla/5.0' },
-            maxRedirects: 2
+            maxRedirects: 3,
+            validateStatus: (status) => status === 200
           });
           const img = await loadImage(Buffer.from(response.data));
           
@@ -68,6 +69,7 @@ class MusicPlayerCard {
           ctx.drawImage(img, artX, artY, artSize, artSize);
           ctx.restore();
         } catch (err) {
+          console.log(`Thumbnail load failed, using fallback: ${err.message}`);
           this.drawFallbackArtwork(ctx, artX, artY, artSize);
         }
       } else {
@@ -186,9 +188,12 @@ class MusicPlayerCard {
       ctx.textAlign = 'left';
       ctx.fillText(`Requested by ${requester}`, infoX, height - 40);
       
-      return canvas.toBuffer('image/png');
+      const buffer = canvas.toBuffer('image/png');
+      console.log(`✅ Music card buffer generated successfully (${buffer.length} bytes)`);
+      return buffer;
     } catch (error) {
-      console.error('Error generating music card:', error);
+      console.error('❌ Error generating music card:', error.message);
+      console.error('Stack trace:', error.stack);
       return null;
     }
   }
