@@ -1,6 +1,7 @@
 const { musicValidations } = require("@helpers/BotUtils");
-const { LoopType } = require("@lavaclient/queue");
 const { ApplicationCommandOptionType } = require("discord.js");
+const { useMainPlayer, QueueRepeatMode } = require("discord-player");
+const emojiManager = require("@helpers/EmojiManager");
 
 /**
  * @type {import("@structures/Command")}
@@ -13,7 +14,7 @@ module.exports = {
   command: {
     enabled: true,
     minArgsCount: 1,
-    usage: "<queue|track>",
+    usage: "<queue|track|off>",
   },
   slashCommand: {
     enabled: true,
@@ -32,6 +33,10 @@ module.exports = {
             name: "track",
             value: "track",
           },
+          {
+            name: "off",
+            value: "off",
+          },
         ],
       },
     ],
@@ -39,7 +44,7 @@ module.exports = {
 
   async messageRun(message, args) {
     const input = args[0].toLowerCase();
-    const type = input === "queue" ? "queue" : "track";
+    const type = input === "queue" ? "queue" : input === "off" ? "off" : "track";
     const response = toggleLoop(message, type);
     await message.safeReply(response);
   },
@@ -53,20 +58,24 @@ module.exports = {
 
 /**
  * @param {import("discord.js").CommandInteraction|import("discord.js").Message} arg0
- * @param {"queue"|"track"} type
+ * @param {"queue"|"track"|"off"} type
  */
 function toggleLoop({ client, guildId }, type) {
-  const player = client.musicManager.getPlayer(guildId);
-
-  // track
-  if (type === "track") {
-    player.queue.setLoop(LoopType.Song);
-    return "Loop mode is set to `track`";
+  const player = useMainPlayer();
+  const queue = player.nodes.get(guildId);
+  
+  if (!queue || !queue.currentTrack) {
+    return `${emojiManager.getError()} No music is currently playing!`;
   }
 
-  // queue
-  else if (type === "queue") {
-    player.queue.setLoop(1);
-    return "Loop mode is set to `queue`";
+  if (type === "track") {
+    queue.setRepeatMode(QueueRepeatMode.TRACK);
+    return `${emojiManager.repeat} Loop mode set to: **Track** 🔂`;
+  } else if (type === "queue") {
+    queue.setRepeatMode(QueueRepeatMode.QUEUE);
+    return `${emojiManager.repeat} Loop mode set to: **Queue** 🔁`;
+  } else if (type === "off") {
+    queue.setRepeatMode(QueueRepeatMode.OFF);
+    return `${emojiManager.repeat} Loop mode: **Off** ➡️`;
   }
 }

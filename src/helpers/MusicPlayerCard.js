@@ -479,6 +479,189 @@ class MusicPlayerCard {
       return null;
     }
   }
+
+  static async generateNowPlayingCardV2(track, queue, requester) {
+    try {
+      const title = track.title || 'Unknown Track';
+      const artist = track.author || 'Unknown Artist';
+      const thumbnail = track.thumbnail || track.artworkUrl || null;
+      
+      const currentTime = queue.node.getTimestamp()?.current?.value || 0;
+      const totalTime = track.durationMS || track.duration || 0;
+      const volume = queue.node.volume || 100;
+      const isPaused = queue.node.isPaused();
+      const loopMode = queue.repeatMode || 0;
+      
+      const width = 800;
+      const height = 400;
+      const canvas = createCanvas(width, height);
+      const ctx = canvas.getContext('2d');
+      
+      const gradient = ctx.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, '#1a1a2e');
+      gradient.addColorStop(0.5, '#16213e');
+      gradient.addColorStop(1, '#0f3460');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+      
+      for (let i = 0; i < 50; i++) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.03})`;
+        ctx.fillRect(Math.random() * width, Math.random() * height, 1, 1);
+      }
+      
+      const artSize = 280;
+      const artX = 40;
+      const artY = (height - artSize) / 2;
+      
+      ctx.shadowColor = '#8B5CF6';
+      ctx.shadowBlur = 40;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      
+      this.roundRect(ctx, artX, artY, artSize, artSize, 20);
+      ctx.fillStyle = '#2a2a3e';
+      ctx.fill();
+      
+      if (thumbnail) {
+        try {
+          console.log(`📥 [Thumbnail] Attempting to load: ${thumbnail}`);
+          const response = await axios.get(thumbnail, { 
+            responseType: 'arraybuffer',
+            timeout: 5000,
+            headers: { 
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8'
+            },
+            maxRedirects: 5,
+            validateStatus: (status) => status >= 200 && status < 400
+          });
+          const img = await loadImage(Buffer.from(response.data));
+          
+          ctx.save();
+          this.roundRect(ctx, artX, artY, artSize, artSize, 20);
+          ctx.clip();
+          ctx.drawImage(img, artX, artY, artSize, artSize);
+          ctx.restore();
+          console.log(`✅ [Thumbnail] Successfully loaded and drawn`);
+        } catch (err) {
+          console.log(`❌ [Thumbnail] Load failed (${err.message}), using fallback`);
+          this.drawFallbackArtwork(ctx, artX, artY, artSize);
+        }
+      } else {
+        console.log(`ℹ️ [Thumbnail] No thumbnail URL available, using fallback artwork`);
+        this.drawFallbackArtwork(ctx, artX, artY, artSize);
+      }
+      
+      ctx.shadowBlur = 0;
+      
+      if (isPaused) {
+        this.drawPauseOverlay(ctx, artX, artY, artSize);
+      } else {
+        this.drawMusicBars(ctx, artX, artY, artSize);
+      }
+      
+      const infoX = artX + artSize + 40;
+      const infoWidth = width - infoX - 40;
+      let currentY = 80;
+      
+      const gradient2 = ctx.createLinearGradient(infoX, currentY, infoX + 200, currentY);
+      gradient2.addColorStop(0, '#A855F7');
+      gradient2.addColorStop(1, '#EC4899');
+      ctx.fillStyle = gradient2;
+      ctx.font = 'bold 20px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('🎵 NOW PLAYING', infoX, currentY);
+      currentY += 40;
+      
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 32px Arial';
+      const maxTitleWidth = infoWidth;
+      let displayTitle = title;
+      if (ctx.measureText(title).width > maxTitleWidth) {
+        while (ctx.measureText(displayTitle + '...').width > maxTitleWidth && displayTitle.length > 0) {
+          displayTitle = displayTitle.slice(0, -1);
+        }
+        displayTitle += '...';
+      }
+      ctx.fillText(displayTitle, infoX, currentY);
+      currentY += 45;
+      
+      ctx.fillStyle = '#B4B4B4';
+      ctx.font = '22px Arial';
+      let displayArtist = artist;
+      if (ctx.measureText(artist).width > maxTitleWidth) {
+        while (ctx.measureText(displayArtist + '...').width > maxTitleWidth && displayArtist.length > 0) {
+          displayArtist = displayArtist.slice(0, -1);
+        }
+        displayArtist += '...';
+      }
+      ctx.fillText(displayArtist, infoX, currentY);
+      currentY += 50;
+      
+      const progressBarWidth = infoWidth - 20;
+      const progressBarHeight = 8;
+      const progressBarX = infoX;
+      const progressBarY = currentY;
+      
+      ctx.fillStyle = '#2a2a3e';
+      this.roundRect(ctx, progressBarX, progressBarY, progressBarWidth, progressBarHeight, 4);
+      ctx.fill();
+      
+      if (totalTime > 0) {
+        const progress = Math.min(1, currentTime / totalTime);
+        const gradient3 = ctx.createLinearGradient(progressBarX, 0, progressBarX + progressBarWidth, 0);
+        gradient3.addColorStop(0, '#A855F7');
+        gradient3.addColorStop(1, '#EC4899');
+        ctx.fillStyle = gradient3;
+        this.roundRect(ctx, progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight, 4);
+        ctx.fill();
+      }
+      
+      currentY += 25;
+      
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#B4B4B4';
+      const currentTimeStr = this.formatDuration(currentTime);
+      const totalTimeStr = this.formatDuration(totalTime);
+      ctx.fillText(currentTimeStr, progressBarX, currentY);
+      ctx.textAlign = 'right';
+      ctx.fillText(totalTimeStr, progressBarX + progressBarWidth, currentY);
+      ctx.textAlign = 'left';
+      currentY += 35;
+      
+      const iconY = currentY;
+      let iconX = infoX;
+      
+      ctx.font = '18px Arial';
+      ctx.fillStyle = '#E0E0E0';
+      
+      const volumeEmoji = volume === 0 ? '🔇' : volume < 33 ? '🔉' : '🔊';
+      ctx.fillText(`${volumeEmoji} ${volume}%`, iconX, iconY);
+      iconX += 100;
+      
+      if (loopMode === 1) {
+        ctx.fillText('🔁 Queue', iconX, iconY);
+        iconX += 100;
+      } else if (loopMode === 2) {
+        ctx.fillText('🔂 Track', iconX, iconY);
+        iconX += 100;
+      }
+      
+      if (queue.tracks.length > 0) {
+        ctx.fillText(`📋 ${queue.tracks.length} in queue`, iconX, iconY);
+      }
+      
+      currentY += 30;
+      ctx.font = '14px Arial';
+      ctx.fillStyle = '#8B8B8B';
+      ctx.fillText(`Requested by ${requester}`, infoX, currentY);
+      
+      return canvas.toBuffer('image/png');
+    } catch (error) {
+      console.error('Error generating V2 music card:', error);
+      return null;
+    }
+  }
 }
 
 module.exports = MusicPlayerCard;

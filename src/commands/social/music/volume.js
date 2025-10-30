@@ -1,5 +1,7 @@
 const { musicValidations } = require("@helpers/BotUtils");
 const { ApplicationCommandOptionType } = require("discord.js");
+const { useMainPlayer } = require("discord-player");
+const emojiManager = require("@helpers/EmojiManager");
 
 /**
  * @type {import("@structures/Command")}
@@ -27,13 +29,13 @@ module.exports = {
 
   async messageRun(message, args) {
     const amount = args[0];
-    const response = await volume(message, amount);
+    const response = await setVolume(message, amount);
     await message.safeReply(response);
   },
 
   async interactionRun(interaction) {
     const amount = interaction.options.getInteger("amount");
-    const response = await volume(interaction, amount);
+    const response = await setVolume(interaction, amount);
     await interaction.followUp(response);
   },
 };
@@ -41,12 +43,23 @@ module.exports = {
 /**
  * @param {import("discord.js").CommandInteraction|import("discord.js").Message} arg0
  */
-async function volume({ client, guildId }, volume) {
-  const player = client.musicManager.getPlayer(guildId);
+async function setVolume({ client, guildId }, volume) {
+  const player = useMainPlayer();
+  const queue = player.nodes.get(guildId);
+  
+  if (!queue || !queue.currentTrack) {
+    return `${emojiManager.getError()} No music is currently playing!`;
+  }
 
-  if (!volume) return `> The player volume is \`${player.volume}\`.`;
-  if (volume < 1 || volume > 100) return "you need to give me a volume between 1 and 100.";
+  if (!volume) {
+    const currentVolume = queue.node.volume;
+    return `${emojiManager.volume_up} Current volume: **${currentVolume}%**`;
+  }
 
-  await player.setVolume(volume);
-  return `🎶 Music player volume is set to \`${volume}\`.`;
+  if (volume < 1 || volume > 100) {
+    return `${emojiManager.getError()} Volume must be between 1 and 100!`;
+  }
+
+  queue.node.setVolume(volume);
+  return `${emojiManager.volume_up} Volume set to **${volume}%**`;
 }

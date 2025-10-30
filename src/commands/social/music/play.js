@@ -1,27 +1,23 @@
-const { EmbedBuilder, ApplicationCommandOptionType, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const prettyMs = require("pretty-ms");
-const { EMBED_COLORS, MUSIC } = require("@root/config");
-const MusicPlayerView = require("@helpers/MusicPlayerView");
+const { ApplicationCommandOptionType, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { MUSIC } = require("@root/config");
 const MusicPlayerCard = require("@helpers/MusicPlayerCard");
-const ContainerBuilder = require("@helpers/ContainerBuilder");
-
-const search_prefix = {
-  YT: "ytsearch",
-  YTM: "ytmsearch",
-  SC: "scsearch",
-};
+const MusicPlayerView = require("@helpers/MusicPlayerView");
+const emojiManager = require("@helpers/EmojiManager");
+const { QueryType, useMainPlayer } = require("discord-player");
 
 /**
+ * High-performance play command using discord-player
+ * Optimized for handling 50-100+ servers simultaneously
  * @type {import("@structures/Command")}
  */
 module.exports = {
   name: "play",
-  description: "play a song from youtube",
+  description: "Play music from YouTube, Spotify, SoundCloud, Apple Music, and more",
   category: "MUSIC",
-  botPermissions: ["EmbedLinks"],
+  botPermissions: ["EmbedLinks", "Connect", "Speak"],
   command: {
     enabled: true,
-    usage: "<song-name>",
+    usage: "<song name or URL>",
     minArgsCount: 1,
   },
   slashCommand: {
@@ -29,7 +25,7 @@ module.exports = {
     options: [
       {
         name: "query",
-        description: "song name or url",
+        description: "Song name or URL (YouTube, Spotify, SoundCloud, etc.)",
         type: ApplicationCommandOptionType.String,
         required: true,
       },
@@ -50,179 +46,169 @@ module.exports = {
 };
 
 /**
- * @param {import("discord.js").CommandInteraction|import("discord.js").Message} arg0
+ * Play music with discord-player
+ * @param {import("discord.js").CommandInteraction|import("discord.js").Message} context
  * @param {string} query
  */
 async function play({ member, guild, channel }, query) {
-  if (!member.voice.channel) return "🚫 You need to join a voice channel first";
-
-  let player = guild.client.musicManager.getPlayer(guild.id);
-  if (player && !guild.members.me.voice.channel) {
-    await player.disconnect();
-    await guild.client.musicManager.destroyPlayer(guild.id);
-    player = null;
+  if (!member.voice.channel) {
+    return `${emojiManager.getError()} You need to join a voice channel first!`;
   }
 
-  if (player && member.voice.channel.id !== guild.members.me.voice.channel?.id) {
-    return "🚫 You must be in the same voice channel as mine";
+  const botChannel = guild.members.me.voice.channel;
+  if (botChannel && member.voice.channel.id !== botChannel.id) {
+    return `${emojiManager.getError()} You must be in the same voice channel as me!`;
   }
 
-  let tracks = [];
-  let description = "";
+  const player = useMainPlayer();
+  if (!player) {
+    guild.client.logger.error("Music player not initialized!");
+    return `${emojiManager.getError()} Music system is not ready. Please try again in a moment.`;
+  }
 
   try {
-    // Use Riffy's resolve method to handle all platforms including Spotify
-    const resolve = await guild.client.musicManager.resolve({
-      query: /^https?:\/\//.test(query) ? query : `${search_prefix[MUSIC.DEFAULT_SOURCE]}:${query}`,
-      requester: member.user
+    guild.client.logger.log(`🔎 Searching for: ${query}`);
+    
+    const searchResult = await player.search(query, {
+      requestedBy: member.user,
+      searchEngine: QueryType.AUTO,
     });
 
-    const { loadType, tracks: resolvedTracks, playlistInfo } = resolve;
-
-    // Handle Lavalink v4 load types
-    if (loadType === "error" || loadType === "empty") {
-      guild.client.logger.error("Search error", resolve);
-      return "🚫 There was an error while searching";
+    if (!searchResult || !searchResult.hasTracks()) {
+      guild.client.logger.warn(`No results found for: ${query}`);
+      return `${emojiManager.getError()} No results found for **${query}**`;
     }
 
-    if (loadType === "playlist") {
-      tracks = resolvedTracks;
-      description = playlistInfo?.name || "Playlist";
-    } else if (loadType === "search" || loadType === "track") {
-      if (!resolvedTracks || resolvedTracks.length === 0) {
-        return `No results found matching ${query}`;
+    guild.client.logger.log(`✅ Found: ${searchResult.tracks.length} track(s)`);
+
+    const queue = player.nodes.create(guild, {
+      metadata: {
+        channel: channel,
+        requestedBy: member.user,
+        cardShownByPlayCommand: false,
+      },
+      selfDeaf: true,
+      volume: 100,
+      leaveOnEmpty: true,
+      leaveOnEmptyCooldown: MUSIC.IDLE_TIME * 1000 || 60000,
+      leaveOnEnd: true,
+      leaveOnStop: true,
+    });
+
+    try {
+      if (!queue.connection) {
+        await queue.connect(member.voice.channel);
+        guild.client.logger.log(`🔌 Connected to voice channel: ${member.voice.channel.name}`);
       }
-      tracks = [resolvedTracks[0]];
-    } else {
-      return `No results found matching ${query}`;
+    } catch (error) {
+      guild.client.logger.error("Failed to connect to voice channel:", error);
+      queue.delete();
+      return `${emojiManager.getError()} Could not join your voice channel!`;
     }
 
-    if (!tracks || tracks.length === 0) {
-      guild.client.logger.debug({ query, resolve });
-      return "🚫 An error occurred while searching for the song";
+    const wasPlaying = queue.node.isPlaying();
+
+    if (searchResult.playlist) {
+      queue.addTrack(searchResult.tracks);
+      
+      if (!wasPlaying) {
+        await queue.node.play();
+      }
+
+      return `${emojiManager.music} Added **${searchResult.tracks.length}** tracks from **${searchResult.playlist.title}** to the queue!`;
+    } else {
+      const track = searchResult.tracks[0];
+      queue.addTrack(track);
+
+      if (!wasPlaying) {
+        queue.metadata.cardShownByPlayCommand = true;
+
+        try {
+          await queue.node.play();
+          
+          const requester = member.user.username;
+          guild.client.logger.log(`🎨 Generating instant music card for: ${track.title}`);
+
+          const cardBuffer = await Promise.race([
+            MusicPlayerCard.generateNowPlayingCardV2(track, queue, requester),
+            new Promise((resolve) =>
+              setTimeout(() => {
+                guild.client.logger.warn(`⏱️ Card generation timeout for: ${track.title}`);
+                resolve(null);
+              }, 7000)
+            ),
+          ]);
+
+          if (cardBuffer) {
+            guild.client.logger.log(`✅ Instant music card generated successfully`);
+            const attachment = new AttachmentBuilder(cardBuffer, { name: "now-playing.png" });
+
+            const row1 = new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setCustomId("music_queue_view")
+                .setLabel("Queue")
+                .setEmoji(emojiManager.queue)
+                .setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder()
+                .setCustomId("music_previous")
+                .setEmoji(emojiManager.previous)
+                .setStyle(ButtonStyle.Primary),
+              new ButtonBuilder()
+                .setCustomId("music_pause")
+                .setEmoji(emojiManager.pause)
+                .setStyle(ButtonStyle.Primary),
+              new ButtonBuilder()
+                .setCustomId("music_next")
+                .setEmoji(emojiManager.skip)
+                .setStyle(ButtonStyle.Primary),
+              new ButtonBuilder()
+                .setCustomId("music_stop")
+                .setEmoji(emojiManager.stop)
+                .setStyle(ButtonStyle.Danger)
+            );
+
+            const row2 = new ActionRowBuilder().addComponents(
+              new ButtonBuilder()
+                .setCustomId("music_shuffle")
+                .setEmoji(emojiManager.shuffle)
+                .setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder()
+                .setCustomId("music_loop")
+                .setEmoji(emojiManager.repeat)
+                .setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder()
+                .setCustomId("music_voldown")
+                .setLabel("Vol -")
+                .setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder()
+                .setCustomId("music_volup")
+                .setLabel("Vol +")
+                .setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder()
+                .setCustomId("music_history")
+                .setEmoji(emojiManager.clock)
+                .setStyle(ButtonStyle.Secondary)
+            );
+
+            return {
+              files: [attachment],
+              components: [row1, row2],
+            };
+          } else {
+            guild.client.logger.warn(`⚠️ Card timeout, using fallback display`);
+            const display = MusicPlayerView.createNowPlayingDisplayV2(queue, requester);
+            return display;
+          }
+        } catch (error) {
+          guild.client.logger.error("Error during playback start:", error);
+          return `${emojiManager.music} Now playing: **${track.title}** by ${track.author}`;
+        }
+      } else {
+        return `${emojiManager.music} Added **${track.title}** to the queue! Position: **${queue.tracks.size}**`;
+      }
     }
   } catch (error) {
-    guild.client.logger.error("Search Exception", typeof error === "object" ? JSON.stringify(error) : error);
-    return "🚫 An error occurred while searching for the song";
-  }
-
-  // Create player and/or join the member's VC
-  if (!player || !player.connected) {
-    player = guild.client.musicManager.createConnection({
-      guildId: guild.id,
-      voiceChannel: member.voice.channel.id,
-      textChannel: channel.id,
-      deaf: true
-    });
-    
-    // Initialize player data
-    player.data = player.data || {};
-    
-    // Wait for connection to be ready (prevents "playing but no sound" issue)
-    await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        guild.client.logger.warn('Voice connection took longer than expected, proceeding anyway');
-        resolve();
-      }, 5000);
-      
-      const checkConnection = setInterval(() => {
-        if (player.connected && guild.members.me.voice.channel) {
-          clearInterval(checkConnection);
-          clearTimeout(timeout);
-          resolve();
-        }
-      }, 100);
-    });
-    
-    // Additional brief wait for Lavalink voice session to stabilize
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-
-  // Check if player is already playing
-  const wasPlaying = player.playing || player.paused;
-  const wasEmpty = !player.queue || player.queue.length === 0;
-
-  // Add tracks to queue
-  for (const track of tracks) {
-    player.queue.add(track);
-  }
-  
-  // Start playback if not already started
-  if (!wasPlaying) {
-    await player.play();
-    
-    // For single tracks, show visual now playing card immediately
-    if (tracks.length === 1) {
-      // Wait briefly for track to start
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const track = tracks[0];
-      
-      try {
-        // Generate beautiful visual card
-        const cardBuffer = await Promise.race([
-          MusicPlayerCard.generateNowPlayingCard(track, player, member.user.username),
-          new Promise((resolve) => setTimeout(() => resolve(null), 7000))
-        ]);
-        
-        if (cardBuffer) {
-          const attachment = new AttachmentBuilder(cardBuffer, { name: 'now-playing.png' });
-          
-          // Use new container display with card inside
-          const containerDisplay = MusicPlayerView.createNowPlayingWithCard(player, member.user.username, cardBuffer);
-          
-          // Mark that we've already shown the card so trackStart won't send another
-          player.data.cardShownByPlayCommand = true;
-          
-          return {
-            files: [attachment],
-            ...containerDisplay
-          };
-        }
-      } catch (error) {
-        guild.client.logger.error('Error generating play card:', error.message);
-      }
-      
-      // Fallback to enqueued card if visual card fails
-      return MusicPlayerView.createEnqueuedCard(track, member.user.username, null, 0);
-    }
-  }
-
-  // Show professional enqueued card for tracks added to existing queue
-  if (tracks.length === 1) {
-    const track = tracks[0];
-    const position = player.queue.length > 0 ? player.queue.length : null;
-    const queueLength = player.queue.length || 0;
-    
-    return MusicPlayerView.createEnqueuedCard(track, member.user.username, position, queueLength);
-  } else {
-    // For playlists, show professional playlist added card
-    const components = [];
-    
-    components.push(ContainerBuilder.createTextDisplay(
-      `# ${MusicPlayerView.EMOJIS.QUEUE} Playlist Enqueued`
-    ));
-    
-    components.push(ContainerBuilder.createTextDisplay(
-      `### ${MusicPlayerView.EMOJIS.CHECK} Added **${description}** to the queue.`
-    ));
-    
-    components.push(ContainerBuilder.createSeparator());
-    
-    const totalDuration = prettyMs(
-      tracks.map((t) => t.info.length).reduce((a, b) => a + b, 0),
-      { colonNotation: true }
-    );
-    
-    components.push(ContainerBuilder.createTextDisplay(
-      `**Tracks:** ${tracks.length} songs • **Duration:** ${totalDuration}\n` +
-      `**Requested by:** @${member.user.username}`
-    ));
-    
-    const container = new ContainerBuilder()
-      .addContainer({ accentColor: MusicPlayerView.THEME.PURPLE, components })
-      .build();
-    
-    return container;
+    guild.client.logger.error("Play command error:", error);
+    return `${emojiManager.getError()} An error occurred while trying to play music: ${error.message}`;
   }
 }

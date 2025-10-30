@@ -1,5 +1,6 @@
 const MusicPlayerView = require("@helpers/MusicPlayerView");
 const { ApplicationCommandOptionType } = require("discord.js");
+const { useMainPlayer } = require("discord-player");
 
 /**
  * @type {import("@structures/Command")}
@@ -12,6 +13,7 @@ module.exports = {
   command: {
     enabled: true,
     usage: "[page]",
+    aliases: ["q"],
   },
   slashCommand: {
     enabled: true,
@@ -43,14 +45,16 @@ module.exports = {
  * @param {number} pgNo
  */
 function getQueue({ client, guild, member, author }, pgNo) {
-  const player = client.musicManager.getPlayer(guild.id);
-  if (!player || !player.current) {
+  const player = useMainPlayer();
+  const queue = player.nodes.get(guild.id);
+  
+  if (!queue || !queue.currentTrack) {
     return MusicPlayerView.createEmptyQueueDisplay();
   }
 
   const page = pgNo || 1;
-  const track = player.current;
-  const requester = track.requester?.username || track.requester || (member?.user?.username ? `${member.user.username}` : (author ? `${author.username}` : "User"));
+  const track = queue.currentTrack;
+  const requester = track.requestedBy?.username || track.requestedBy?.tag || (member?.user?.username || author?.username || "User");
 
-  return MusicPlayerView.createQueueDisplay(player, requester, page);
+  return MusicPlayerView.createQueueDisplayV2(queue, requester, page);
 }

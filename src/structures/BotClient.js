@@ -13,7 +13,7 @@ const { recursiveReadDirSync } = require("../helpers/Utils");
 const { validateCommand, validateContext } = require("../helpers/Validator");
 const { schemas } = require("@src/database/mongoose");
 const CommandCategory = require("./CommandCategory");
-const riffyHandler = require("../handlers/riffy");
+const musicPlayerHandler = require("../handlers/musicPlayer");
 const giveawaysHandler = require("../handlers/giveaway");
 const { DiscordTogether } = require("discord-together");
 const EmojiManager = require("../helpers/EmojiManager");
@@ -67,17 +67,17 @@ module.exports = class BotClient extends Client {
       ? new WebhookClient({ url: process.env.JOIN_LEAVE_LOGS })
       : undefined;
 
-    // Music Player (using Riffy)
-    if (this.config.MUSIC.ENABLED) this.musicManager = riffyHandler(this);
-
-    // Giveaways
-    if (this.config.GIVEAWAYS.ENABLED) this.giveawaysManager = giveawaysHandler(this);
-
-    // Logger
+    // Logger (must be initialized before music player)
     this.logger = Logger;
 
     // Database
     this.database = schemas;
+
+    // Music Player (using discord-player - high performance, handles 50-100+ servers)
+    if (this.config.MUSIC.ENABLED) this.musicManager = musicPlayerHandler(this);
+
+    // Giveaways
+    if (this.config.GIVEAWAYS.ENABLED) this.giveawaysManager = giveawaysHandler(this);
 
     // Discord Together
     this.discordTogether = new DiscordTogether(this);

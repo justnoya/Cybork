@@ -649,6 +649,201 @@ class MusicPlayerView {
     container.components.push(row1);
     return container;
   }
+
+  static createNowPlayingDisplayV2(queue, requester) {
+    const track = queue.currentTrack;
+    if (!track) {
+      return this.createEmptyQueueDisplay();
+    }
+
+    const timestamp = queue.node.getTimestamp();
+    const trackProgress = timestamp 
+      ? `\`${this.formatDuration(timestamp.current.value)} / ${this.formatDuration(track.durationMS)}\``
+      : `\`${this.formatDuration(track.durationMS)}\``;
+
+    const progressBar = this.createProgressBar(
+      timestamp?.current?.value || 0,
+      track.durationMS
+    );
+
+    const volume = queue.node.volume;
+    const volumeBar = this.getVolumeBar(volume);
+    const volumeEmoji = this.getVolumeEmoji(volume);
+
+    const loopStatus = queue.repeatMode === 2 ? '🔂 Track' :
+                      queue.repeatMode === 1 ? '🔁 Queue' :
+                      '➡️ Off';
+
+    const components = [
+      {
+        type: "field",
+        name: `${this.EMOJIS.MUSIC} Now Playing`,
+        value: `**${track.title}**\nby ${track.author}`,
+        inline: false,
+      },
+      {
+        type: "field",
+        name: `${this.EMOJIS.CLOCK} Duration`,
+        value: `${progressBar}\n${trackProgress}`,
+        inline: false,
+      },
+      {
+        type: "field",
+        name: `${volumeEmoji} Volume`,
+        value: `${volumeBar} ${volume}%`,
+        inline: true,
+      },
+      {
+        type: "field",
+        name: `${this.EMOJIS.REPEAT} Loop`,
+        value: loopStatus,
+        inline: true,
+      },
+      {
+        type: "field",
+        name: `${this.EMOJIS.QUEUE} Queue`,
+        value: `${queue.tracks.length} track(s)`,
+        inline: true,
+      },
+      {
+        type: "field",
+        name: `${this.EMOJIS.STAR} Requested by`,
+        value: requester,
+        inline: false,
+      },
+    ];
+
+    if (track.thumbnail) {
+      components.unshift({
+        type: "thumbnail",
+        url: track.thumbnail,
+      });
+    }
+
+    return new ContainerBuilder()
+      .addContainer({ accentColor: this.THEME.PURPLE, components })
+      .build();
+  }
+
+  static createProgressBar(current, total, length = 15) {
+    if (!total || total === 0) return '▱'.repeat(length);
+    
+    const progress = Math.min(1, Math.max(0, current / total));
+    const filled = Math.floor(progress * length);
+    const empty = length - filled;
+    
+    return '▰'.repeat(filled) + '▱'.repeat(empty);
+  }
+
+  static createQueueDisplayV2(queue, requester, page = 1) {
+    const tracks = queue.tracks.toArray();
+    const currentTrack = queue.currentTrack;
+    const itemsPerPage = 10;
+    const start = (page - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const tracksToShow = tracks.slice(start, end);
+    const totalPages = Math.ceil(tracks.length / itemsPerPage) || 1;
+
+    const components = [];
+
+    if (currentTrack && currentTrack.thumbnail) {
+      components.push(ContainerBuilder.createThumbnail(currentTrack.thumbnail));
+    }
+
+    const totalSongs = tracks.length + 1;
+    const currentTrackDuration = currentTrack ? currentTrack.durationMS : 0;
+    const queueDuration = tracks.reduce((acc, t) => acc + (t.durationMS || 0), 0);
+    const totalDuration = currentTrackDuration + queueDuration;
+    const totalDurationStr = this.formatDuration(totalDuration);
+
+    components.push(ContainerBuilder.createTextDisplay(
+      `# ${this.EMOJIS.QUEUE} Music Queue`
+    ));
+
+    components.push(ContainerBuilder.createTextDisplay(
+      `**${totalSongs} tracks** • **${totalDurationStr}** total • Page **${page}/${totalPages}**`
+    ));
+
+    components.push(ContainerBuilder.createSeparator());
+
+    if (currentTrack) {
+      const title = (currentTrack.title || 'Unknown Track').substring(0, 50);
+      const author = currentTrack.author || 'Unknown Artist';
+      const duration = this.formatDuration(currentTrack.durationMS || 0);
+      const titleLink = currentTrack.url ? `[${title}](${currentTrack.url})` : title;
+
+      components.push(ContainerBuilder.createTextDisplay(
+        `### ${this.EMOJIS.PLAY} Now Playing\n` +
+        `**${titleLink}**\n` +
+        `by ${author} • \`${duration}\`\n` +
+        `Requested by ${requester}`
+      ));
+
+      if (tracks.length > 0) {
+        components.push(ContainerBuilder.createSeparator());
+      }
+    }
+
+    if (tracks.length === 0) {
+      components.push(ContainerBuilder.createTextDisplay(
+        `*No more tracks in queue. Use \`play\` to add more music!*`
+      ));
+    } else {
+      components.push(ContainerBuilder.createTextDisplay(
+        `### ${this.EMOJIS.NOTES} Up Next (${tracks.length})`
+      ));
+
+      tracksToShow.forEach((track, index) => {
+        const trackNumber = start + index + 1;
+        const title = (track.title || 'Unknown').substring(0, 40);
+        const duration = this.formatDuration(track.durationMS || 0);
+        const trackRequester = track.requestedBy?.username || track.requestedBy?.tag || 'Unknown';
+        
+        components.push({
+          type: 'field',
+          name: `${trackNumber}. ${title}`,
+          value: `by ${track.author || 'Unknown'} • \`${duration}\` • ${trackRequester}`,
+          inline: false,
+        });
+      });
+
+      if (tracks.length > itemsPerPage) {
+        components.push(ContainerBuilder.createTextDisplay(
+          `\n*Showing ${start + 1}-${Math.min(end, tracks.length)} of ${tracks.length} tracks*`
+        ));
+      }
+    }
+
+    const container = new ContainerBuilder()
+      .addContainer({ accentColor: this.THEME.PURPLE, components })
+      .build();
+
+    const row1 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('music_back_to_player')
+        .setEmoji('◀️')
+        .setLabel('Back')
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId(`queue_page_${Math.max(1, page - 1)}`)
+        .setEmoji('⬅️')
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(page <= 1),
+      new ButtonBuilder()
+        .setCustomId(`queue_page_info`)
+        .setLabel(`${page}/${totalPages}`)
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(true),
+      new ButtonBuilder()
+        .setCustomId(`queue_page_${Math.min(totalPages, page + 1)}`)
+        .setEmoji('➡️')
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(page >= totalPages)
+    );
+
+    container.components.push(row1);
+    return container;
+  }
 }
 
 module.exports = MusicPlayerView;

@@ -1,4 +1,6 @@
 const { musicValidations } = require("@helpers/BotUtils");
+const { useMainPlayer } = require("discord-player");
+const emojiManager = require("@helpers/EmojiManager");
 
 /**
  * @type {import("@structures/Command")}
@@ -30,7 +32,17 @@ module.exports = {
  * @param {import("discord.js").CommandInteraction|import("discord.js").Message} arg0
  */
 function shuffle({ client, guildId }) {
-  const player = client.musicManager.getPlayer(guildId);
-  player.queue.shuffle();
-  return "🎶 Queue has been shuffled";
+  const player = useMainPlayer();
+  const queue = player.nodes.get(guildId);
+  
+  if (!queue || !queue.currentTrack) {
+    return `${emojiManager.getError()} No music is currently playing!`;
+  }
+
+  if (queue.tracks.size === 0) {
+    return `${emojiManager.getError()} Queue is empty, nothing to shuffle!`;
+  }
+
+  queue.tracks.shuffle();
+  return `${emojiManager.shuffle} Queue has been shuffled! **${queue.tracks.size}** tracks randomized.`;
 }
