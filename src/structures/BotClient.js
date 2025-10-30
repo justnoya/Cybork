@@ -13,7 +13,7 @@ const { recursiveReadDirSync } = require("../helpers/Utils");
 const { validateCommand, validateContext } = require("../helpers/Validator");
 const { schemas } = require("@src/database/mongoose");
 const CommandCategory = require("./CommandCategory");
-const musicPlayerHandler = require("../handlers/musicPlayer");
+const riffyHandler = require("../handlers/riffy");
 const giveawaysHandler = require("../handlers/giveaway");
 const { DiscordTogether } = require("discord-together");
 const EmojiManager = require("../helpers/EmojiManager");
@@ -73,8 +73,8 @@ module.exports = class BotClient extends Client {
     // Database
     this.database = schemas;
 
-    // Music Player (using discord-player - high performance, handles 50-100+ servers)
-    if (this.config.MUSIC.ENABLED) this.musicManager = musicPlayerHandler(this);
+    // Music Player (using Riffy + Lavalink - powerful, stable, supports all effects)
+    if (this.config.MUSIC.ENABLED) this.musicManager = riffyHandler(this);
 
     // Giveaways
     if (this.config.GIVEAWAYS.ENABLED) this.giveawaysManager = giveawaysHandler(this);
@@ -367,7 +367,6 @@ module.exports = class BotClient extends Client {
    */
   initMusicManager() {
     if (!this.musicManager) {
-      const riffyHandler = require("@handlers/riffy");
       this.musicManager = riffyHandler(this);
     }
   }
