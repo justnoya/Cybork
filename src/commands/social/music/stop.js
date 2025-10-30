@@ -1,5 +1,4 @@
 const { musicValidations } = require("@helpers/BotUtils");
-const { useMainPlayer } = require("discord-player");
 const emojiManager = require("@helpers/EmojiManager");
 
 /**
@@ -33,13 +32,12 @@ module.exports = {
  * @param {import("discord.js").CommandInteraction|import("discord.js").Message} arg0
  */
 async function stop({ client, guildId }) {
-  const player = useMainPlayer();
-  const queue = player.nodes.get(guildId);
+  const player = client.musicManager.getPlayer(guildId);
   
-  if (!queue || !queue.currentTrack) {
+  if (!player || !player.current) {
     return `${emojiManager.getError()} No music is currently playing!`;
   }
 
-  queue.delete();
+  player.destroy();
   return `${emojiManager.stop} Music player stopped and queue cleared!`;
 }

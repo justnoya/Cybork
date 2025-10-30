@@ -1,5 +1,4 @@
 const { musicValidations } = require("@helpers/BotUtils");
-const { useMainPlayer } = require("discord-player");
 const emojiManager = require("@helpers/EmojiManager");
 
 /**
@@ -33,17 +32,17 @@ module.exports = {
  * @param {import("discord.js").CommandInteraction|import("discord.js").Message} arg0
  */
 async function skip({ client, guildId }) {
-  const player = useMainPlayer();
-  const queue = player.nodes.get(guildId);
+  const player = client.musicManager.getPlayer(guildId);
   
-  if (!queue || !queue.currentTrack) {
+  if (!player || !player.current) {
     return `${emojiManager.getError()} There is no song currently playing!`;
   }
 
-  const title = queue.currentTrack.title || "Unknown Track";
+  const trackInfo = player.current.info || player.current;
+  const title = trackInfo.title || "Unknown Track";
   
   try {
-    queue.node.skip();
+    player.skip();
     return `${emojiManager.skip} Skipped: **${title}**`;
   } catch (error) {
     return `${emojiManager.getError()} There is no song to skip!`;

@@ -1,6 +1,5 @@
 const { musicValidations } = require("@helpers/BotUtils");
 const { ApplicationCommandOptionType } = require("discord.js");
-const { useMainPlayer } = require("discord-player");
 const emojiManager = require("@helpers/EmojiManager");
 
 /**
@@ -44,15 +43,14 @@ module.exports = {
  * @param {import("discord.js").CommandInteraction|import("discord.js").Message} arg0
  */
 async function setVolume({ client, guildId }, volume) {
-  const player = useMainPlayer();
-  const queue = player.nodes.get(guildId);
+  const player = client.musicManager.getPlayer(guildId);
   
-  if (!queue || !queue.currentTrack) {
+  if (!player || !player.current) {
     return `${emojiManager.getError()} No music is currently playing!`;
   }
 
   if (!volume) {
-    const currentVolume = queue.node.volume;
+    const currentVolume = player.volume;
     return `${emojiManager.volume_up} Current volume: **${currentVolume}%**`;
   }
 
@@ -60,6 +58,6 @@ async function setVolume({ client, guildId }, volume) {
     return `${emojiManager.getError()} Volume must be between 1 and 100!`;
   }
 
-  queue.node.setVolume(volume);
+  player.setVolume(volume);
   return `${emojiManager.volume_up} Volume set to **${volume}%**`;
 }

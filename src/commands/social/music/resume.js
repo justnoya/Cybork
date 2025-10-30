@@ -1,5 +1,4 @@
 const { musicValidations } = require("@helpers/BotUtils");
-const { useMainPlayer } = require("discord-player");
 const emojiManager = require("@helpers/EmojiManager");
 
 /**
@@ -33,17 +32,16 @@ module.exports = {
  * @param {import("discord.js").CommandInteraction|import("discord.js").Message} arg0
  */
 function resume({ client, guildId }) {
-  const player = useMainPlayer();
-  const queue = player.nodes.get(guildId);
+  const player = client.musicManager.getPlayer(guildId);
   
-  if (!queue || !queue.currentTrack) {
+  if (!player || !player.current) {
     return `${emojiManager.getError()} No music is currently playing!`;
   }
 
-  if (!queue.node.isPaused()) {
+  if (!player.paused) {
     return `${emojiManager.play} The player is not paused!`;
   }
 
-  queue.node.setPaused(false);
+  player.pause(false);
   return `${emojiManager.play} Resumed the music player!`;
 }

@@ -1,6 +1,5 @@
 const { musicValidations } = require("@helpers/BotUtils");
 const { ApplicationCommandOptionType } = require("discord.js");
-const { useMainPlayer, QueueRepeatMode } = require("discord-player");
 const emojiManager = require("@helpers/EmojiManager");
 
 /**
@@ -61,21 +60,20 @@ module.exports = {
  * @param {"queue"|"track"|"off"} type
  */
 function toggleLoop({ client, guildId }, type) {
-  const player = useMainPlayer();
-  const queue = player.nodes.get(guildId);
+  const player = client.musicManager.getPlayer(guildId);
   
-  if (!queue || !queue.currentTrack) {
+  if (!player || !player.current) {
     return `${emojiManager.getError()} No music is currently playing!`;
   }
 
   if (type === "track") {
-    queue.setRepeatMode(QueueRepeatMode.TRACK);
+    player.setLoop("track");
     return `${emojiManager.repeat} Loop mode set to: **Track** 🔂`;
   } else if (type === "queue") {
-    queue.setRepeatMode(QueueRepeatMode.QUEUE);
+    player.setLoop("queue");
     return `${emojiManager.repeat} Loop mode set to: **Queue** 🔁`;
   } else if (type === "off") {
-    queue.setRepeatMode(QueueRepeatMode.OFF);
+    player.setLoop("none");
     return `${emojiManager.repeat} Loop mode: **Off** ➡️`;
   }
 }
