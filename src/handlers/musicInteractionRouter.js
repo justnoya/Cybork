@@ -69,7 +69,7 @@ async function updatePlayerDisplay(interaction, player, requester) {
         new ButtonBuilder()
           .setCustomId('music_loop')
           .setEmoji('🔁')
-          .setStyle((player.queue.loop || 0) > 0 ? ButtonStyle.Success : ButtonStyle.Secondary),
+          .setStyle((player.loop && player.loop !== 'none') ? ButtonStyle.Success : ButtonStyle.Secondary),
         new ButtonBuilder()
           .setCustomId('music_voldown')
           .setLabel('Vol -')
@@ -138,14 +138,9 @@ module.exports = async (client) => {
           return await interaction.reply({ content: '🚫 You must be in the same voice channel', ephemeral: true });
         }
         
-        if (player.queue.previous.length > 0) {
-          const previousTrack = player.queue.previous.pop();
-          player.queue.tracks.unshift(player.queue.current);
-          player.queue.current = previousTrack;
-          await player.queue.start();
-        } else {
-          await player.seek(0);
-        }
+        // Riffy doesn't have previous track history
+        // Seek to beginning of current track instead
+        await player.seek(0);
         
         await updatePlayerDisplay(interaction, player, requester);
       }
@@ -189,7 +184,7 @@ module.exports = async (client) => {
           addToHistory(guild.id, player.queue.current);
         }
         
-        await player.queue.next();
+        await player.stop();
         
         if (player.queue.current) {
           await updatePlayerDisplay(interaction, player, requester);
@@ -221,7 +216,7 @@ module.exports = async (client) => {
       }
       
       else if (customId === 'music_shuffle') {
-        if (!player || !player.queue.tracks || player.queue.tracks.length === 0) {
+        if (!player || !player.queue || player.queue.size === 0) {
           return await interaction.reply({ content: '🚫 Queue is empty', ephemeral: true });
         }
         
@@ -229,11 +224,7 @@ module.exports = async (client) => {
           return await interaction.reply({ content: '🚫 You must be in the same voice channel', ephemeral: true });
         }
         
-        const queue = player.queue.tracks;
-        for (let i = queue.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [queue[i], queue[j]] = [queue[j], queue[i]];
-        }
+        player.queue.shuffle();
         
         await updatePlayerDisplay(interaction, player, requester);
       }
@@ -247,9 +238,9 @@ module.exports = async (client) => {
           return await interaction.reply({ content: '🚫 You must be in the same voice channel', ephemeral: true });
         }
         
-        const currentLoop = player.queue.loop || 0;
-        const newLoop = (currentLoop + 1) % 3;
-        player.queue.setLoop(newLoop);
+        const currentLoop = player.loop || 'none';
+        const newLoop = currentLoop === 'none' ? 'queue' : currentLoop === 'queue' ? 'track' : 'none';
+        player.setLoop(newLoop);
         
         await updatePlayerDisplay(interaction, player, requester);
       }

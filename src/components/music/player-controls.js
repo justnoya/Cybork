@@ -21,13 +21,9 @@ module.exports = async (interaction) => {
   try {
     switch(customId) {
       case 'music_previous':
-        if (!player.queue.previous || player.queue.previous.length === 0) {
-          return interaction.followUp({ 
-            content: "🚫 No previous track!", 
-            ephemeral: true 
-          });
-        }
-        await player.queue.start(player.queue.previous[player.queue.previous.length - 1]);
+        // Riffy doesn't support previous track history by default
+        // Seek to beginning of current track instead
+        await player.seek(0);
         break;
         
       case 'music_pause':
@@ -40,25 +36,25 @@ module.exports = async (interaction) => {
         break;
         
       case 'music_next':
-        if (player.queue.tracks.length === 0) {
+        if (player.queue.size === 0) {
           return interaction.followUp({ 
             content: "🚫 No tracks in queue!", 
             ephemeral: true 
           });
         }
-        await player.queue.next();
+        await player.stop();
         break;
         
       case 'music_stop':
-        await player.queue.clear();
-        await player.disconnect();
+        player.queue.clear();
+        await player.destroy();
         return interaction.followUp({ 
           content: "⏹️ Stopped the music and cleared the queue!", 
           ephemeral: true 
         });
         
       case 'music_shuffle':
-        if (player.queue.tracks.length < 2) {
+        if (player.queue.size < 2) {
           return interaction.followUp({ 
             content: "🚫 Not enough tracks to shuffle!", 
             ephemeral: true 
@@ -68,13 +64,13 @@ module.exports = async (interaction) => {
         break;
         
       case 'music_loop':
-        const loopMode = player.queue.loop;
-        if (loopMode === 0) {
-          player.queue.setLoop(2); // Loop queue
-        } else if (loopMode === 2) {
-          player.queue.setLoop(1); // Loop track
+        const loopMode = player.loop;
+        if (loopMode === 'none' || !loopMode) {
+          player.setLoop('queue'); // Loop queue
+        } else if (loopMode === 'queue') {
+          player.setLoop('track'); // Loop track
         } else {
-          player.queue.setLoop(0); // No loop
+          player.setLoop('none'); // No loop
         }
         break;
         
@@ -95,10 +91,10 @@ module.exports = async (interaction) => {
         });
         
       case 'music_repeat':
-        const currentLoop = player.queue.loop;
-        const nextLoop = currentLoop === 1 ? 0 : 1;
-        player.queue.setLoop(nextLoop);
-        const loopText = nextLoop === 1 ? "🔁 Repeating current track" : "➡️ Repeat disabled";
+        const currentLoop = player.loop;
+        const nextLoop = (currentLoop === 'track' || currentLoop === 1) ? 'none' : 'track';
+        player.setLoop(nextLoop);
+        const loopText = nextLoop === 'track' ? "🔁 Repeating current track" : "➡️ Repeat disabled";
         return interaction.followUp({ 
           content: loopText, 
           ephemeral: true 
