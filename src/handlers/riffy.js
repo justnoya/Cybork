@@ -37,7 +37,7 @@ module.exports = (client) => {
     defaultSearchPlatform: client.config.MUSIC.DEFAULT_SOURCE === 'YT' ? 'ytsearch' : 
                           client.config.MUSIC.DEFAULT_SOURCE === 'YTM' ? 'ytmsearch' : 
                           'scsearch',
-    restVersion: 'v4',
+    restVersion: 'v3',
     reconnectInterval: 5000,
     reconnectTries: 10
   });
