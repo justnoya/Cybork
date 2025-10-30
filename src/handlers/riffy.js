@@ -293,15 +293,6 @@ module.exports = (client) => {
     return riffy.players.get(guildId);
   };
 
-  riffy.createPlayer = (guildId) => {
-    return riffy.createConnection({
-      guildId: guildId,
-      voiceChannel: null,
-      textChannel: null,
-      deaf: true
-    });
-  };
-
   riffy.destroyPlayer = async (guildId) => {
     const player = riffy.players.get(guildId);
     if (player) {

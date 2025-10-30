@@ -327,17 +327,24 @@ async function search({ member, guild, channel }, query) {
   }
 
   // create a player and/or join the member's vc
-  if (!player?.connected) {
-    player = guild.client.musicManager.createPlayer(guild.id);
-    player.queue.data.channel = channel;
-    player.connect(member.voice.channel.id, { deafened: true });
+  if (!player) {
+    player = guild.client.musicManager.createConnection({
+      guildId: guild.id,
+      voiceChannel: member.voice.channel.id,
+      textChannel: channel.id,
+      deaf: true
+    });
+    player.data = player.data || {};
   }
 
   // do queue things
   const started = player.playing || player.paused;
-  player.queue.add(tracks, { requester: member.user.username, next: false });
+  for (const track of tracks) {
+    track.requester = member.user;
+    player.queue.add(track);
+  }
   if (!started) {
-    await player.queue.start();
+    player.play();
   }
 
   // Return container if it's a container object, otherwise return embed
