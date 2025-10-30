@@ -201,6 +201,7 @@ async function play({ member, guild, channel }, query) {
     }
   } catch (error) {
     guild.client.logger.error("Play command error:", error);
+    guild.client.logger.error("Stack trace:", error.stack);
     return `${emojiManager.getError()} An error occurred while trying to play music: ${error.message}`;
   }
 }
