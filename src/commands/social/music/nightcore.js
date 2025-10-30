@@ -32,17 +32,21 @@ module.exports = {
 function toggleNightcore({ client, guildId }) {
   const player = client.musicManager.getPlayer(guildId);
   
+  if (!player) {
+    return "❌ No music is currently playing!";
+  }
+  
   // Check current state
   const currentFilters = player.filters || {};
   const isNightcore = currentFilters.timescale && currentFilters.timescale.speed > 1;
   
   if (isNightcore) {
     // Disable nightcore
-    player.setFilters({});
+    player.setFilter({ timescale: null });
     return "🌙 Nightcore **disabled** - back to normal speed";
   } else {
     // Enable nightcore effect (speed up + pitch up)
-    player.setFilters({
+    player.setFilter({
       timescale: {
         speed: 1.3,
         pitch: 1.3,

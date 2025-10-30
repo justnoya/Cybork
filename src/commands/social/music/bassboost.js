@@ -81,6 +81,11 @@ module.exports = {
  */
 function setBassBoost({ client, guildId }, level) {
   const player = client.musicManager.getPlayer(guildId);
+  
+  if (!player) {
+    return "❌ No music is currently playing!";
+  }
+  
   const gain = levels[level];
   
   // Enhanced bassboost with 5 low-frequency bands for better quality

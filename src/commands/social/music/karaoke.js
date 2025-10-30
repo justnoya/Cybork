@@ -32,17 +32,21 @@ module.exports = {
 function toggleKaraoke({ client, guildId }) {
   const player = client.musicManager.getPlayer(guildId);
   
+  if (!player) {
+    return "❌ No music is currently playing!";
+  }
+  
   // Check current state
   const currentFilters = player.filters || {};
   const isKaraoke = currentFilters.karaoke;
   
   if (isKaraoke) {
     // Disable karaoke
-    player.setFilters({});
+    player.setFilter({ karaoke: null });
     return "🎤 Karaoke mode **disabled** - vocals restored";
   } else {
     // Enable karaoke mode (removes vocals)
-    player.setFilters({
+    player.setFilter({
       karaoke: {
         level: 1.0,
         monoLevel: 1.0,

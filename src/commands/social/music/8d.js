@@ -32,17 +32,21 @@ module.exports = {
 function toggle8D({ client, guildId }) {
   const player = client.musicManager.getPlayer(guildId);
   
+  if (!player) {
+    return "❌ No music is currently playing!";
+  }
+  
   // Check current state
   const currentFilters = player.filters || {};
   const is8D = currentFilters.rotation;
   
   if (is8D) {
-    // Disable 8D
-    player.setFilters({});
+    // Disable 8D - clear all filters
+    player.setFilter({ rotation: null });
     return "🔊 8D audio **disabled** - back to normal";
   } else {
     // Enable 8D audio effect (rotation creates surround sound effect)
-    player.setFilters({
+    player.setFilter({
       rotation: {
         rotationHz: 0.2
       }

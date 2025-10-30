@@ -32,17 +32,21 @@ module.exports = {
 function toggleTremolo({ client, guildId }) {
   const player = client.musicManager.getPlayer(guildId);
   
+  if (!player) {
+    return "❌ No music is currently playing!";
+  }
+  
   // Check current state
   const currentFilters = player.filters || {};
   const isTremolo = currentFilters.tremolo;
   
   if (isTremolo) {
     // Disable tremolo
-    player.setFilters({});
+    player.setFilter({ tremolo: null });
     return "🎚️ Tremolo **disabled** - volume stabilized";
   } else {
     // Enable tremolo effect
-    player.setFilters({
+    player.setFilter({
       tremolo: {
         frequency: 4.0,
         depth: 0.75

@@ -32,17 +32,21 @@ module.exports = {
 function toggleDistortion({ client, guildId }) {
   const player = client.musicManager.getPlayer(guildId);
   
+  if (!player) {
+    return "❌ No music is currently playing!";
+  }
+  
   // Check current state
   const currentFilters = player.filters || {};
   const isDistortion = currentFilters.distortion;
   
   if (isDistortion) {
     // Disable distortion
-    player.setFilters({});
+    player.setFilter({ distortion: null });
     return "🎸 Distortion **disabled** - clean audio restored";
   } else {
     // Enable distortion effect
-    player.setFilters({
+    player.setFilter({
       distortion: {
         sinOffset: 0.0,
         sinScale: 1.0,
