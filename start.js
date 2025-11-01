@@ -32,7 +32,15 @@ let isShuttingDown = false;
 async function autoFixVulnerabilities() {
   return new Promise((resolve) => {
     log('🔧 Checking and fixing vulnerabilities...', colors.cyan);
+    
+    // Set a timeout for npm audit fix
+    const timeout = setTimeout(() => {
+      log('Vulnerability check skipped (timeout)', colors.dim);
+      resolve();
+    }, 5000); // 5 second timeout
+    
     exec('npm audit fix --force > /dev/null 2>&1', (error) => {
+      clearTimeout(timeout);
       if (error) {
         log('Vulnerability check completed', colors.dim);
       } else {
