@@ -10,12 +10,12 @@ module.exports = {
   userPermissions: ["ManageGuild"],
   botPermissions: ["ManageGuild"],
   command: {
-    enabled: true,
+    enabled: false,
     usage: "<image_url>",
     minArgsCount: 1,
   },
   slashCommand: {
-    enabled: true,
+    enabled: false,
     options: [
       {
         name: "image_url",

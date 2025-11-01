@@ -12,11 +12,11 @@ module.exports = {
   cooldown: 21600,
   botPermissions: ["EmbedLinks"],
   command: {
-    enabled: true,
+    enabled: false,
     aliases: ["begmoney", "plead"],
   },
   slashCommand: {
-    enabled: true,
+    enabled: false,
   },
 
   async messageRun(message, args) {

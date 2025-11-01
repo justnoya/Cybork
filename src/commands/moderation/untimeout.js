@@ -12,13 +12,13 @@ module.exports = {
   botPermissions: ["ModerateMembers"],
   userPermissions: ["ModerateMembers"],
   command: {
-    enabled: true,
+    enabled: false,
     aliases: [],
     usage: "<ID|@member> [reason]",
     minArgsCount: 1,
   },
   slashCommand: {
-    enabled: true,
+    enabled: false,
     options: [
       {
         name: "user",

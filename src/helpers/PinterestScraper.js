@@ -133,13 +133,18 @@ class PinterestScraper {
           "--disable-dev-shm-usage",
           "--disable-accelerated-2d-canvas",
           "--disable-gpu",
+          "--disable-software-rasterizer",
+          "--disable-extensions",
           "--window-size=1920x1080",
           "--disable-blink-features=AutomationControlled",
+          "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         ],
         defaultViewport: {
           width: 1920,
           height: 1080,
         },
+        timeout: 60000,
+        protocolTimeout: 60000,
       });
       this.browserInitialized = true;
       debug("Browser launched successfully");
@@ -189,14 +194,25 @@ class PinterestScraper {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
       });
 
-      // Navigate to Pinterest search
-      await page.goto(searchUrl, {
-        waitUntil: "networkidle2",
-        timeout: 30000,
-      });
+      // Navigate to Pinterest search with better error handling
+      try {
+        await page.goto(searchUrl, {
+          waitUntil: "domcontentloaded",
+          timeout: 45000,
+        });
+      } catch (navError) {
+        debug(`Navigation warning: ${navError.message}, continuing...`);
+      }
 
-      // Wait for images to load
-      await page.waitForTimeout(3000);
+      // Wait for images to load - using waitForSelector instead of waitForTimeout
+      try {
+        await page.waitForSelector('img[src*="pinimg.com"]', { timeout: 15000 });
+      } catch {
+        debug("Pinterest images took longer to load, continuing with available content...");
+      }
+      
+      // Additional wait for dynamic content
+      await page.waitForTimeout(2000);
 
       // Scroll to load more images
       await this.autoScroll(page);
@@ -277,22 +293,33 @@ class PinterestScraper {
    * Auto-scroll page to load more content
    */
   async autoScroll(page) {
-    await page.evaluate(async () => {
-      await new Promise((resolve) => {
-        let totalHeight = 0;
-        const distance = 300;
-        const timer = setInterval(() => {
-          const scrollHeight = document.body.scrollHeight;
-          window.scrollBy(0, distance);
-          totalHeight += distance;
+    try {
+      await page.evaluate(async () => {
+        await new Promise((resolve) => {
+          let totalHeight = 0;
+          const distance = 300;
+          const maxScrolls = 7; // Limit number of scrolls
+          let scrolls = 0;
+          
+          const timer = setInterval(() => {
+            const scrollHeight = document.body.scrollHeight;
+            window.scrollBy(0, distance);
+            totalHeight += distance;
+            scrolls++;
 
-          if (totalHeight >= scrollHeight || totalHeight >= 2000) {
-            clearInterval(timer);
-            resolve();
-          }
-        }, 100);
+            if (totalHeight >= scrollHeight || totalHeight >= 2000 || scrolls >= maxScrolls) {
+              clearInterval(timer);
+              resolve();
+            }
+          }, 150);
+        });
       });
-    });
+      
+      // Wait for new images to load after scrolling
+      await page.waitForTimeout(1000);
+    } catch (err) {
+      debug("Auto-scroll error (non-critical):", err.message);
+    }
   }
 
   /**

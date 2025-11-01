@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType, ChannelType, ComponentType, ButtonStyle, TextInputStyle } = require("discord.js");
+const { ApplicationCommandOptionType, ChannelType, ComponentType, ButtonStyle, TextInputStyle, ChannelSelectMenuBuilder, ActionRowBuilder } = require("discord.js");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 const InteractionUtils = require("@helpers/InteractionUtils");
 const emojis = require("@root/emojis.json");
@@ -539,7 +539,7 @@ async function handleAntiCaps(interaction, settings) {
 }
 
 /**
- * Handle Whitelist management
+ * Handle Whitelist management with modern Channel Select Menus
  */
 async function handleWhitelist(interaction, settings) {
   const whitelistChannels = settings.automod?.wh_channels || [];
@@ -550,31 +550,44 @@ async function handleWhitelist(interaction, settings) {
   
   if (whitelistChannels.length === 0) {
     components.push(ContainerBuilder.createTextDisplay(
-      "**No channels whitelisted**\n\nWhitelisted channels are exempt from automod rules."
+      "**No channels whitelisted**\n\nWhitelisted channels are exempt from automod rules.\n\nSelect channels from the menu below to whitelist them."
     ));
   } else {
     const channelList = whitelistChannels.map(id => `<#${id}>`).join("\n");
     components.push(ContainerBuilder.createTextDisplay(
-      `**Whitelisted Channels (${whitelistChannels.length}):**\n${channelList}`
+      `**Whitelisted Channels (${whitelistChannels.length}):**\n${channelList}\n\n` +
+      `Use the channel selector to modify the whitelist.`
     ));
   }
   
+  components.push(ContainerBuilder.createSeparator());
+  
+  // Create Channel Select Menu
+  const channelSelect = new ChannelSelectMenuBuilder()
+    .setCustomId("automod_whitelist_select")
+    .setPlaceholder("📋 Select channels to whitelist")
+    .setMinValues(0)
+    .setMaxValues(Math.min(25, Math.max(1, whitelistChannels.length + 10)));
+  
+  const selectRow = new ActionRowBuilder().addComponents(channelSelect);
+  
   const buttonRow = InteractionUtils.createButtonRow([
     {
-      customId: "whitelist_add",
-      label: "Add Channel",
-      emoji: "➕",
-      style: ButtonStyle.Secondary,
+      customId: "whitelist_save",
+      label: "Save Changes",
+      emoji: "✅",
+      style: ButtonStyle.Success,
     },
     {
-      customId: "whitelist_remove",
-      label: "Remove Channel",
-      emoji: "➖",
-      style: ButtonStyle.Secondary,
+      customId: "whitelist_clear",
+      label: "Clear All",
+      emoji: "🗑️",
+      style: ButtonStyle.Danger,
       disabled: whitelistChannels.length === 0,
     },
   ]);
   
+  components.push(selectRow);
   components.push(buttonRow);
   
   const payload = new ContainerBuilder()
@@ -586,8 +599,8 @@ async function handleWhitelist(interaction, settings) {
   const response = await InteractionUtils.awaitComponent(
     await interaction.fetchReply(),
     interaction.user.id,
-    { componentType: ComponentType.Button },
-    60000
+    { componentType: [ComponentType.ChannelSelect, ComponentType.Button] },
+    120000
   );
   
   if (!response) {
@@ -597,84 +610,73 @@ async function handleWhitelist(interaction, settings) {
     });
   }
   
-  if (response.customId === "whitelist_add") {
-    const modal = InteractionUtils.createModal("whitelist_add_modal", "Add Whitelisted Channel", [
-      {
-        customId: "channel_id",
-        label: "Channel ID",
-        style: TextInputStyle.Short,
-        placeholder: "Enter channel ID to whitelist",
-        required: true,
-      },
-    ]);
+  if (response.customId === "automod_whitelist_select") {
+    await response.deferUpdate(); // Acknowledge the interaction immediately
+    const selectedChannels = response.values;
+    response.tempSelected = selectedChannels;
     
-    await response.showModal(modal);
-    
-    const modalSubmit = await InteractionUtils.awaitModalSubmit(response, "whitelist_add_modal", 120000);
-    if (!modalSubmit) return;
-    
-    const channelId = modalSubmit.fields.getTextInputValue("channel_id");
-    const channel = await interaction.guild.channels.fetch(channelId).catch(() => null);
-    
-    if (!channel) {
-      return modalSubmit.reply({
-        embeds: [InteractionUtils.createErrorEmbed("Invalid channel ID!")],
-        ephemeral: true
-      });
-    }
-    
-    if (!settings.automod) settings.automod = {};
-    if (!settings.automod.wh_channels) settings.automod.wh_channels = [];
-    
-    if (settings.automod.wh_channels.includes(channel.id)) {
-      return modalSubmit.reply({
-        embeds: [InteractionUtils.createErrorEmbed(`${channel} is already whitelisted`)],
-        ephemeral: true
-      });
-    }
-    
-    settings.automod.wh_channels.push(channel.id);
-    await settings.save();
-    
-    await modalSubmit.reply({
+    await interaction.editReply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `${getEmoji("success")} Channel Whitelisted\n\n${channel} is now exempt from automod`
+        `${getEmoji("success")} Channels Selected\n\n` +
+        `Selected ${selectedChannels.length} channel(s):\n${selectedChannels.map(id => `<#${id}>`).join(", ")}\n\n` +
+        `Click **Save Changes** to apply the whitelist.`
       )],
-      ephemeral: true
+      components: [buttonRow]
     });
-  } else if (response.customId === "whitelist_remove") {
-    const modal = InteractionUtils.createModal("whitelist_remove_modal", "Remove Whitelisted Channel", [
-      {
-        customId: "channel_id",
-        label: "Channel ID",
-        style: TextInputStyle.Short,
-        placeholder: "Enter channel ID to remove",
-        required: true,
-      },
-    ]);
     
-    await response.showModal(modal);
+    // Wait for save button
+    const saveResponse = await InteractionUtils.awaitComponent(
+      await response.message,
+      interaction.user.id,
+      { componentType: ComponentType.Button },
+      60000
+    );
     
-    const modalSubmit = await InteractionUtils.awaitModalSubmit(response, "whitelist_remove_modal", 120000);
-    if (!modalSubmit) return;
+    if (!saveResponse) return;
     
-    const channelId = modalSubmit.fields.getTextInputValue("channel_id");
-    
-    if (!settings.automod?.wh_channels?.includes(channelId)) {
-      return modalSubmit.reply({
-        embeds: [InteractionUtils.createErrorEmbed("Channel is not whitelisted")],
-        ephemeral: true
+    if (saveResponse.customId === "whitelist_save") {
+      if (!settings.automod) settings.automod = {};
+      settings.automod.wh_channels = response.tempSelected || selectedChannels;
+      await settings.save();
+      
+      await saveResponse.update({
+        embeds: [InteractionUtils.createSuccessEmbed(
+          `${getEmoji("success")} Whitelist Updated!\n\n` +
+          `${settings.automod.wh_channels.length} channel(s) are now exempt from automod:\n` +
+          `${settings.automod.wh_channels.map(id => `<#${id}>`).join(", ")}`
+        )],
+        components: []
+      });
+    } else if (saveResponse.customId === "whitelist_clear") {
+      if (!settings.automod) settings.automod = {};
+      settings.automod.wh_channels = [];
+      await settings.save();
+      
+      await saveResponse.update({
+        embeds: [InteractionUtils.createSuccessEmbed(
+          `${getEmoji("success")} Whitelist Cleared!\n\nAll channels are now subject to automod rules.`
+        )],
+        components: []
       });
     }
-    
-    settings.automod.wh_channels = settings.automod.wh_channels.filter(id => id !== channelId);
+  } else if (response.customId === "whitelist_save") {
+    // Save with current whitelist
+    await response.update({
+      embeds: [InteractionUtils.createSuccessEmbed(
+        `${getEmoji("success")} No changes made to whitelist.`
+      )],
+      components: []
+    });
+  } else if (response.customId === "whitelist_clear") {
+    if (!settings.automod) settings.automod = {};
+    settings.automod.wh_channels = [];
     await settings.save();
     
-    await modalSubmit.reply({
+    await response.update({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `${getEmoji("success")} Channel Removed\n\n<#${channelId}> is no longer whitelisted`
+        `${getEmoji("success")} Whitelist Cleared!\n\nAll channels are now subject to automod rules.`
       )],
-      ephemeral: true
+      components: []
     });
   }
 }

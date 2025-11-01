@@ -12,13 +12,13 @@ module.exports = {
   category: "ECONOMY",
   botPermissions: ["EmbedLinks"],
   command: {
-    enabled: true,
+    enabled: false,
     usage: "<amount>",
     minArgsCount: 1,
     aliases: ["slot"],
   },
   slashCommand: {
-    enabled: true,
+    enabled: false,
     options: [
       {
         name: "coins",

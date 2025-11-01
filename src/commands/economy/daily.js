@@ -12,11 +12,11 @@ module.exports = {
   category: "ECONOMY",
   botPermissions: ["EmbedLinks"],
   command: {
-    enabled: true,
+    enabled: false,
     aliases: ["dailyreward", "dailybonus"],
   },
   slashCommand: {
-    enabled: true,
+    enabled: false,
   },
 
   async messageRun(message, args) {

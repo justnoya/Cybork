@@ -19,12 +19,12 @@ module.exports = {
   botPermissions: ["EmbedLinks"],
   cooldown: 20,
   command: {
-    enabled: true,
+    enabled: false,
     aliases: ["memes", "randommeme"],
     usage: "[category]",
   },
   slashCommand: {
-    enabled: true,
+    enabled: false,
     options: [
       {
         name: "category",

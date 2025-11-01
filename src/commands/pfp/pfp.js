@@ -24,7 +24,7 @@ module.exports = {
   botPermissions: ["SendMessages", "EmbedLinks", "AttachFiles"],
   cooldown: 5,
   command: {
-    enabled: true,
+    enabled: false,
     usage: "[query]",
   },
   slashCommand: {

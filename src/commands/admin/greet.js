@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType, ChannelType, ComponentType, ButtonStyle, TextInputStyle } = require("discord.js");
+const { ApplicationCommandOptionType, ChannelType, ComponentType, ButtonStyle, TextInputStyle, ChannelSelectMenuBuilder, ActionRowBuilder } = require("discord.js");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 const InteractionUtils = require("@helpers/InteractionUtils");
 const { buildGreeting } = require("@handlers/greeting");
@@ -193,7 +193,7 @@ function setupCollector(message, source, isInteraction, settings) {
 }
 
 /**
- * Handle channel management
+ * Handle channel management with modern Channel Select Menus
  */
 async function handleChannels(interaction, source, isInteraction, settings) {
   const welcome = settings.welcome || {};
@@ -204,28 +204,41 @@ async function handleChannels(interaction, source, isInteraction, settings) {
   components.push(ContainerBuilder.createSeparator());
   
   if (channels.length === 0) {
-    components.push(ContainerBuilder.createTextDisplay("**No channels configured**\n\nAdd channels to send welcome greetings."));
+    components.push(ContainerBuilder.createTextDisplay("**No channels configured**\n\nUse the channel selector below to add greeting channels."));
   } else {
     const channelList = channels.map(id => `<#${id}>`).join("\n");
     components.push(ContainerBuilder.createTextDisplay(`**Active Channels (${channels.length}):**\n${channelList}`));
   }
   
+  components.push(ContainerBuilder.createSeparator());
+  components.push(ContainerBuilder.createTextDisplay("**Select channels from the menu below:**\n• Add new channels\n• Remove existing channels"));
+  
+  // Create Channel Select Menu
+  const channelSelect = new ChannelSelectMenuBuilder()
+    .setCustomId("greet_channel_select")
+    .setPlaceholder("📺 Select text channels for greetings")
+    .setChannelTypes([ChannelType.GuildText])
+    .setMinValues(0)
+    .setMaxValues(Math.min(25, Math.max(1, channels.length + 5))); // Allow adding more channels
+  
+  const selectRow = new ActionRowBuilder().addComponents(channelSelect);
+  
   const buttonRow = InteractionUtils.createButtonRow([
     {
-      customId: "greet_channel_add",
-      label: "Add Channel",
-      emoji: "➕",
-      style: ButtonStyle.Secondary,
+      customId: "greet_channel_save",
+      label: "Save Changes",
+      emoji: "✅",
+      style: ButtonStyle.Success,
     },
     {
-      customId: "greet_channel_remove",
-      label: "Remove Channel",
-      emoji: "➖",
+      customId: "greet_channel_back",
+      label: "Back",
+      emoji: "◀️",
       style: ButtonStyle.Secondary,
-      disabled: channels.length === 0,
     },
   ]);
   
+  components.push(selectRow);
   components.push(buttonRow);
   
   const payload = new ContainerBuilder()
@@ -237,104 +250,80 @@ async function handleChannels(interaction, source, isInteraction, settings) {
   const response = await InteractionUtils.awaitComponent(
     await interaction.fetchReply(),
     interaction.user.id,
-    { componentType: ComponentType.Button },
-    60000
+    { componentType: [ComponentType.ChannelSelect, ComponentType.Button] },
+    120000
   );
   
   if (!response) {
-    return interaction.editReply({ content: "⏱️ Channel selection timed out", components: [] });
+    return interaction.editReply({ content: "⏱️ Selection timed out", components: [] });
   }
   
-  if (response.customId === "greet_channel_add") {
-    const modal = InteractionUtils.createModal("greet_add_channel", "Add Greeting Channel", [
-      {
-        customId: "channel_id",
-        label: "Channel ID",
-        style: TextInputStyle.Short,
-        placeholder: "Enter channel ID",
-        required: true,
-      },
-    ]);
+  if (response.customId === "greet_channel_select") {
+    await response.deferUpdate(); // Acknowledge the interaction immediately
+    // Store selected channels temporarily
+    response.selectedChannels = response.values;
     
-    await response.showModal(modal);
-    
-    const modalSubmit = await InteractionUtils.awaitModalSubmit(response, "greet_add_channel", 120000);
-    if (!modalSubmit) return;
-    
-    const channelId = modalSubmit.fields.getTextInputValue("channel_id");
-    const channel = await interaction.guild.channels.fetch(channelId).catch(() => null);
-    
-    if (!channel || channel.type !== ChannelType.GuildText) {
-      return modalSubmit.reply({
-        embeds: [InteractionUtils.createErrorEmbed("Invalid text channel ID!")],
-        ephemeral: true
-      });
-    }
-    
-    if (!channel.permissionsFor(interaction.guild.members.me).has(["SendMessages", "EmbedLinks"])) {
-      return modalSubmit.reply({
-        embeds: [InteractionUtils.createErrorEmbed(`I need SendMessages and EmbedLinks permissions in ${channel}!`)],
-        ephemeral: true
-      });
-    }
-    
-    if (!settings.welcome) settings.welcome = { enabled: true };
-    if (!settings.welcome.channels) settings.welcome.channels = [];
-    
-    if (settings.welcome.channels.includes(channel.id)) {
-      return modalSubmit.reply({
-        embeds: [InteractionUtils.createErrorEmbed(`${channel} is already a greeting channel`)],
-        ephemeral: true
-      });
-    }
-    
-    settings.welcome.channels.push(channel.id);
-    settings.welcome.enabled = true;
-    await settings.save();
-    
-    await modalSubmit.reply({
+    await interaction.editReply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `${getEmoji("success")} Greeting Channel Added\n\n${channel} will now receive welcome messages`
+        `${getEmoji("success")} Channels Selected\n\n` +
+        `Selected ${response.values.length} channel(s):\n${response.values.map(id => `<#${id}>`).join(", ")}\n\n` +
+        `Click **Save Changes** to apply.`
       )],
-      ephemeral: true
+      components: [buttonRow]
     });
     
-    await showGreetingPanel(source, isInteraction, settings);
-  } else if (response.customId === "greet_channel_remove") {
-    const modal = InteractionUtils.createModal("greet_remove_channel", "Remove Greeting Channel", [
-      {
-        customId: "channel_id",
-        label: "Channel ID",
-        style: TextInputStyle.Short,
-        placeholder: "Enter channel ID to remove",
-        required: true,
-      },
-    ]);
+    // Wait for save button
+    const saveResponse = await InteractionUtils.awaitComponent(
+      await response.message,
+      interaction.user.id,
+      { componentType: ComponentType.Button },
+      60000
+    );
     
-    await response.showModal(modal);
-    
-    const modalSubmit = await InteractionUtils.awaitModalSubmit(response, "greet_remove_channel", 120000);
-    if (!modalSubmit) return;
-    
-    const channelId = modalSubmit.fields.getTextInputValue("channel_id");
-    
-    if (!settings.welcome?.channels?.includes(channelId)) {
-      return modalSubmit.reply({
-        embeds: [InteractionUtils.createErrorEmbed("Channel is not in the greeting list")],
-        ephemeral: true
-      });
+    if (!saveResponse || saveResponse.customId === "greet_channel_back") {
+      return showGreetingPanel(source, isInteraction, settings);
     }
     
-    settings.welcome.channels = settings.welcome.channels.filter(id => id !== channelId);
-    await settings.save();
-    
-    await modalSubmit.reply({
-      embeds: [InteractionUtils.createSuccessEmbed(
-        `${getEmoji("success")} Channel Removed\n\n<#${channelId}> will no longer receive greetings`
-      )],
-      ephemeral: true
-    });
-    
+    if (saveResponse.customId === "greet_channel_save") {
+      const selectedChannels = response.selectedChannels || response.values;
+      
+      // Validate permissions for all selected channels
+      const invalidChannels = [];
+      for (const channelId of selectedChannels) {
+        const channel = interaction.guild.channels.cache.get(channelId);
+        if (channel && !channel.permissionsFor(interaction.guild.members.me).has(["SendMessages", "EmbedLinks"])) {
+          invalidChannels.push(channel.toString());
+        }
+      }
+      
+      if (invalidChannels.length > 0) {
+        await saveResponse.update({
+          embeds: [InteractionUtils.createErrorEmbed(
+            `⚠️ Missing Permissions\n\nI need SendMessages and EmbedLinks permissions in:\n${invalidChannels.join(", ")}`
+          )],
+          components: []
+        });
+        setTimeout(() => showGreetingPanel(source, isInteraction, settings), 3000);
+        return;
+      }
+      
+      // Save the channels
+      if (!settings.welcome) settings.welcome = { enabled: true };
+      settings.welcome.channels = selectedChannels;
+      settings.welcome.enabled = selectedChannels.length > 0;
+      await settings.save();
+      
+      await saveResponse.update({
+        embeds: [InteractionUtils.createSuccessEmbed(
+          `${getEmoji("success")} Greeting Channels Updated!\n\n` +
+          `Active channels: ${selectedChannels.length}\n${selectedChannels.map(id => `<#${id}>`).join(", ")}`
+        )],
+        components: []
+      });
+      
+      setTimeout(() => showGreetingPanel(source, isInteraction, settings), 2000);
+    }
+  } else if (response.customId === "greet_channel_save" || response.customId === "greet_channel_back") {
     await showGreetingPanel(source, isInteraction, settings);
   }
 }

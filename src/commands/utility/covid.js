@@ -13,13 +13,13 @@ module.exports = {
   category: "UTILITY",
   botPermissions: ["EmbedLinks"],
   command: {
-    enabled: true,
+    enabled: false,
     aliases: ["coronavirus", "covid19"],
     usage: "<country>",
     minArgsCount: 1,
   },
   slashCommand: {
-    enabled: true,
+    enabled: false,
     options: [
       {
         name: "country",

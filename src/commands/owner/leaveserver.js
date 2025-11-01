@@ -7,7 +7,7 @@ module.exports = {
   category: "OWNER",
   botPermissions: ["EmbedLinks"],
   command: {
-    enabled: true,
+    enabled: false,
     aliases: ["leaveguild"],
     minArgsCount: 1,
     usage: "<serverId>",

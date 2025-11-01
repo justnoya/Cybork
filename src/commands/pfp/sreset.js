@@ -10,11 +10,11 @@ module.exports = {
   userPermissions: ["ManageGuild"],
   botPermissions: ["ChangeNickname"],
   command: {
-    enabled: true,
+    enabled: false,
     usage: "",
   },
   slashCommand: {
-    enabled: true,
+    enabled: false,
     options: [],
   },
 

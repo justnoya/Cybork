@@ -13,7 +13,7 @@ module.exports = {
   botPermissions: ["ManageRoles", "ManageChannels"],
   userPermissions: ["ModerateMembers"],
   command: {
-    enabled: true,
+    enabled: false,
     aliases: ["silence"],
     usage: "<@member|ID> [reason]",
     minArgsCount: 1,

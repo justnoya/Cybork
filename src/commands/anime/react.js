@@ -12,17 +12,17 @@ const choices = ["hug", "kiss", "cuddle", "feed", "pat", "poke", "slap", "smug",
 module.exports = {
   name: "react",
   description: "anime reactions",
-  enabled: true,
+  enabled: false,
   category: "ANIME",
   cooldown: 5,
   command: {
-    enabled: true,
+    enabled: false,
     aliases: ["reaction", "animereact"],
     minArgsCount: 1,
     usage: "[reaction]",
   },
   slashCommand: {
-    enabled: true,
+    enabled: false,
     options: [
       {
         name: "category",

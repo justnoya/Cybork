@@ -11,7 +11,7 @@ module.exports = {
   category: "MODERATION",
   userPermissions: ["KickMembers"],
   command: {
-    enabled: true,
+    enabled: false,
     aliases: ["warns", "warnslist"],
     minArgsCount: 1,
     subcommands: [
@@ -26,7 +26,7 @@ module.exports = {
     ],
   },
   slashCommand: {
-    enabled: true,
+    enabled: false,
     options: [
       {
         name: "list",

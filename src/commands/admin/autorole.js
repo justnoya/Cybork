@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType, ComponentType, ButtonStyle, TextInputStyle } = require("discord.js");
+const { ApplicationCommandOptionType, ComponentType, ButtonStyle, TextInputStyle, RoleSelectMenuBuilder, ActionRowBuilder } = require("discord.js");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 const InteractionUtils = require("@helpers/InteractionUtils");
 const emojis = require("@root/emojis.json");
@@ -161,7 +161,7 @@ function setupCollector(message, source, isInteraction, settings) {
 }
 
 /**
- * Handle human roles management
+ * Handle human roles management with modern Role Select Menus
  */
 async function handleHumanRoles(interaction, source, isInteraction, settings) {
   const humanRoles = settings.autorole?.humans || [];
@@ -171,7 +171,9 @@ async function handleHumanRoles(interaction, source, isInteraction, settings) {
   components.push(ContainerBuilder.createSeparator());
   
   if (humanRoles.length === 0) {
-    components.push(ContainerBuilder.createTextDisplay("**No human roles configured**\n\nAdd roles to assign to new members."));
+    components.push(ContainerBuilder.createTextDisplay(
+      "**No human roles configured**\n\nSelect roles from the menu below to auto-assign them to new members."
+    ));
   } else {
     const roles = humanRoles
       .map(id => interaction.guild.roles.cache.get(id))
@@ -179,25 +181,39 @@ async function handleHumanRoles(interaction, source, isInteraction, settings) {
     const roleList = roles.length > 0 
       ? roles.map(r => r.toString()).join("\n")
       : "None (roles may have been deleted)";
-    components.push(ContainerBuilder.createTextDisplay(`**Configured Roles (${roles.length}):**\n${roleList}`));
+    components.push(ContainerBuilder.createTextDisplay(
+      `**Configured Roles (${roles.length}):**\n${roleList}\n\n` +
+      `Use the role selector below to modify human autoroles.`
+    ));
   }
+  
+  components.push(ContainerBuilder.createSeparator());
+  
+  // Create Role Select Menu
+  const roleSelect = new RoleSelectMenuBuilder()
+    .setCustomId("human_role_select")
+    .setPlaceholder("👥 Select roles for human members")
+    .setMinValues(0)
+    .setMaxValues(Math.min(25, Math.max(1, humanRoles.length + 10)));
+  
+  const selectRow = new ActionRowBuilder().addComponents(roleSelect);
   
   const buttonRow = InteractionUtils.createButtonRow([
     {
-      customId: "human_role_add",
-      label: "Add Role",
-      emoji: "➕",
-      style: ButtonStyle.Secondary,
+      customId: "human_role_save",
+      label: "Save Changes",
+      emoji: "✅",
+      style: ButtonStyle.Success,
     },
     {
-      customId: "human_role_remove",
-      label: "Remove Role",
-      emoji: "➖",
+      customId: "human_role_back",
+      label: "Back",
+      emoji: "◀️",
       style: ButtonStyle.Secondary,
-      disabled: humanRoles.length === 0,
     },
   ]);
   
+  components.push(selectRow);
   components.push(buttonRow);
   
   const payload = new ContainerBuilder()
@@ -209,105 +225,79 @@ async function handleHumanRoles(interaction, source, isInteraction, settings) {
   const response = await InteractionUtils.awaitComponent(
     await interaction.fetchReply(),
     interaction.user.id,
-    { componentType: ComponentType.Button },
-    60000
+    { componentType: [ComponentType.RoleSelect, ComponentType.Button] },
+    120000
   );
   
   if (!response) {
     return interaction.editReply({ content: "⏱️ Selection timed out", components: [] });
   }
   
-  if (response.customId === "human_role_add") {
-    const modal = InteractionUtils.createModal("human_role_add", "Add Human Auto-Role", [
-      {
-        customId: "role_id",
-        label: "Role ID",
-        style: TextInputStyle.Short,
-        placeholder: "Enter role ID",
-        required: true,
-      },
-    ]);
+  if (response.customId === "human_role_select") {
+    await response.deferUpdate(); // Acknowledge the interaction immediately
+    const selectedRoles = response.values;
+    response.tempSelected = selectedRoles;
     
-    await response.showModal(modal);
-    
-    const modalSubmit = await InteractionUtils.awaitModalSubmit(response, "human_role_add", 120000);
-    if (!modalSubmit) return;
-    
-    const roleId = modalSubmit.fields.getTextInputValue("role_id");
-    const role = await interaction.guild.roles.fetch(roleId).catch(() => null);
-    
-    if (!role) {
-      return modalSubmit.reply({
-        embeds: [InteractionUtils.createErrorEmbed("Invalid role ID!")],
-        ephemeral: true
-      });
+    // Validate all selected roles
+    const invalidRoles = [];
+    for (const roleId of selectedRoles) {
+      const role = interaction.guild.roles.cache.get(roleId);
+      if (role) {
+        const validation = validateRole(interaction.guild, role);
+        if (validation.error) {
+          invalidRoles.push(`${role.toString()}: ${validation.error}`);
+        }
+      }
     }
     
-    // Validate role
-    const validation = validateRole(interaction.guild, role);
-    if (validation.error) {
-      return modalSubmit.reply({
-        embeds: [InteractionUtils.createErrorEmbed(validation.error)],
-        ephemeral: true
+    if (invalidRoles.length > 0) {
+      await interaction.editReply({
+        embeds: [InteractionUtils.createErrorEmbed(
+          `⚠️ Invalid Roles\n\n${invalidRoles.join("\n")}`
+        )],
+        components: [buttonRow]
       });
+      return;
     }
     
-    if (!settings.autorole) settings.autorole = { humans: [], bots: [] };
-    if (!settings.autorole.humans) settings.autorole.humans = [];
-    
-    if (settings.autorole.humans.includes(role.id)) {
-      return modalSubmit.reply({
-        embeds: [InteractionUtils.createErrorEmbed(`${role} is already configured as a human autorole`)],
-        ephemeral: true
-      });
-    }
-    
-    settings.autorole.humans.push(role.id);
-    await settings.save();
-    
-    await modalSubmit.reply({
+    await interaction.editReply({
       embeds: [InteractionUtils.createSuccessEmbed(
-        `${emojis.success} Human Role Added\n\n${role} will now be assigned to new members`
+        `${getEmoji("success")} Roles Selected\n\n` +
+        `Selected ${selectedRoles.length} role(s):\n${selectedRoles.map(id => `<@&${id}>`).join(", ")}\n\n` +
+        `Click **Save Changes** to apply.`
       )],
-      ephemeral: true
+      components: [buttonRow]
     });
     
-    await showAutorolePanel(source, isInteraction, settings);
-  } else if (response.customId === "human_role_remove") {
-    const modal = InteractionUtils.createModal("human_role_remove", "Remove Human Auto-Role", [
-      {
-        customId: "role_id",
-        label: "Role ID",
-        style: TextInputStyle.Short,
-        placeholder: "Enter role ID to remove",
-        required: true,
-      },
-    ]);
+    // Wait for save button
+    const saveResponse = await InteractionUtils.awaitComponent(
+      await response.message,
+      interaction.user.id,
+      { componentType: ComponentType.Button },
+      60000
+    );
     
-    await response.showModal(modal);
-    
-    const modalSubmit = await InteractionUtils.awaitModalSubmit(response, "human_role_remove", 120000);
-    if (!modalSubmit) return;
-    
-    const roleId = modalSubmit.fields.getTextInputValue("role_id");
-    
-    if (!settings.autorole?.humans?.includes(roleId)) {
-      return modalSubmit.reply({
-        embeds: [InteractionUtils.createErrorEmbed("Role is not configured as a human autorole")],
-        ephemeral: true
-      });
+    if (!saveResponse || saveResponse.customId === "human_role_back") {
+      return showAutorolePanel(source, isInteraction, settings);
     }
     
-    settings.autorole.humans = settings.autorole.humans.filter(id => id !== roleId);
-    await settings.save();
-    
-    await modalSubmit.reply({
-      embeds: [InteractionUtils.createSuccessEmbed(
-        `${emojis.success} Role Removed\n\n<@&${roleId}> will no longer be assigned to new members`
-      )],
-      ephemeral: true
-    });
-    
+    if (saveResponse.customId === "human_role_save") {
+      if (!settings.autorole) settings.autorole = { humans: [], bots: [] };
+      settings.autorole.humans = response.tempSelected || selectedRoles;
+      await settings.save();
+      
+      await saveResponse.update({
+        embeds: [InteractionUtils.createSuccessEmbed(
+          `${getEmoji("success")} Human Auto-Roles Updated!\n\n` +
+          `${settings.autorole.humans.length} role(s) will be assigned to new members:\n` +
+          `${settings.autorole.humans.map(id => `<@&${id}>`).join(", ")}`
+        )],
+        components: []
+      });
+      
+      setTimeout(() => showAutorolePanel(source, isInteraction, settings), 2000);
+    }
+  } else if (response.customId === "human_role_save" || response.customId === "human_role_back") {
     await showAutorolePanel(source, isInteraction, settings);
   }
 }

@@ -13,7 +13,7 @@ module.exports = {
   category: "OWNER",
   botPermissions: ["EmbedLinks"],
   command: {
-    enabled: true,
+    enabled: false,
     aliases: ["evaluate", "exec"],
     usage: "<script>",
     minArgsCount: 1,

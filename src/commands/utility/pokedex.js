@@ -13,13 +13,13 @@ module.exports = {
   botPermissions: ["EmbedLinks"],
   cooldown: 5,
   command: {
-    enabled: true,
+    enabled: false,
     aliases: ["pokemon", "poke"],
     usage: "<pokemon>",
     minArgsCount: 1,
   },
   slashCommand: {
-    enabled: true,
+    enabled: false,
     options: [
       {
         name: "pokemon",

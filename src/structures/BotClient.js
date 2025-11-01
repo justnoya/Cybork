@@ -20,6 +20,7 @@ const EmojiManager = require("../helpers/EmojiManager");
 const InteractionRouter = require("../handlers/interactionRouter");
 const PartyManager = require("../handlers/partyManager");
 const PartyMusicHandler = require("../handlers/partyMusicHandler");
+const { ProcessorManager } = require("../processors");
 
 module.exports = class BotClient extends Client {
   constructor() {
@@ -93,6 +94,9 @@ module.exports = class BotClient extends Client {
 
     // Party Interaction Router
     require("../handlers/partyInteractionRouter").init(this);
+    
+    // Advanced Processor System (High-Performance for 200+ servers)
+    this.processors = new ProcessorManager(this);
   }
 
   /**

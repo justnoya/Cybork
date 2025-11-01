@@ -10,12 +10,12 @@ module.exports = {
   category: "PFP",
   botPermissions: ["AttachFiles"],
   command: {
-    enabled: true,
+    enabled: false,
     usage: "<attach image or provide URL>",
     minArgsCount: 0,
   },
   slashCommand: {
-    enabled: true,
+    enabled: false,
     options: [
       {
         name: "url",
