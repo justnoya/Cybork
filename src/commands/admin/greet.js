@@ -23,19 +23,32 @@ module.exports = {
   },
 
   async messageRun(message, args, data) {
-    await showGreetingPanel(message, false, data.settings);
+    const panelMsg = await message.safeReply("Loading...");
+    await showGreetingPanel(message, panelMsg, false, data.settings, true);
   },
 
   async interactionRun(interaction, data) {
     await interaction.deferReply({ ephemeral: true });
-    await showGreetingPanel(interaction, true, data.settings);
+    const panelMsg = await interaction.fetchReply();
+    await showGreetingPanel(interaction, panelMsg, true, data.settings, true);
   },
 };
 
 /**
+ * Helper to update panel message for both interaction and message flows
+ */
+async function updatePanel(panelMsg, isInteraction, payload) {
+  if (isInteraction) {
+    await panelMsg.edit(payload);
+  } else {
+    await panelMsg.edit(payload);
+  }
+}
+
+/**
  * Show main greeting panel
  */
-async function showGreetingPanel(source, isInteraction, settings) {
+async function showGreetingPanel(source, panelMsg, isInteraction, settings, isInitial = false) {
   const welcome = settings.welcome || {};
   
   const components = [];
@@ -132,18 +145,18 @@ async function showGreetingPanel(source, isInteraction, settings) {
     })
     .build();
   
-  const msg = isInteraction
-    ? await source.editReply(payload)
-    : await source.safeReply(payload);
+  await updatePanel(panelMsg, isInteraction, payload);
   
-  setupCollector(msg, source, isInteraction, settings);
+  if (isInitial) {
+    setupCollector(source, panelMsg, isInteraction, settings);
+  }
 }
 
 /**
  * Setup collector
  */
-function setupCollector(message, source, isInteraction, settings) {
-  const collector = message.createMessageComponentCollector({
+function setupCollector(source, panelMsg, isInteraction, settings) {
+  const collector = panelMsg.createMessageComponentCollector({
     componentType: ComponentType.Button,
     filter: (i) => i.user.id === (isInteraction ? source.user.id : source.author.id),
     time: 300000,
@@ -153,54 +166,57 @@ function setupCollector(message, source, isInteraction, settings) {
     try {
       switch (interaction.customId) {
         case "greet_channels":
-          await handleChannels(interaction, source, isInteraction, settings);
+          await interaction.deferUpdate();
+          await showChannelManager(source, panelMsg, isInteraction, settings);
           break;
         case "greet_message":
-          await handleMessage(interaction, settings);
-          await showGreetingPanel(source, isInteraction, settings);
+          await handleMessage(interaction, source, panelMsg, isInteraction, settings);
           break;
         case "greet_embed":
-          await handleEmbedSettings(interaction, settings);
-          await showGreetingPanel(source, isInteraction, settings);
+          await interaction.deferUpdate();
+          await showEmbedSettings(source, panelMsg, isInteraction, settings);
           break;
         case "greet_autodel":
-          await handleAutoDelete(interaction, settings);
-          await showGreetingPanel(source, isInteraction, settings);
+          await interaction.deferUpdate();
+          await showAutoDeleteSettings(source, panelMsg, isInteraction, settings);
           break;
         case "greet_test":
           await handleTest(interaction, source, settings);
           break;
         case "greet_variables":
-          await handleVariables(interaction);
+          await interaction.deferUpdate();
+          await showVariables(source, panelMsg, isInteraction, settings);
           break;
       }
     } catch (error) {
       console.error("Greet panel error:", error);
-      await interaction.reply({
-        content: `${getEmoji("error")} An error occurred: ${error.message}`,
-        ephemeral: true,
-      }).catch(() => {});
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          embeds: [InteractionUtils.createErrorEmbed(`${getEmoji("error")} An error occurred: ${error.message}`)],
+          ephemeral: true,
+        }).catch(() => {});
+      }
     }
   });
   
   collector.on("end", () => {
-    if (message && message.components) {
-      message.edit({
-        components: InteractionUtils.disableComponents(message.components)
+    if (panelMsg && panelMsg.components) {
+      panelMsg.edit({
+        components: InteractionUtils.disableComponents(panelMsg.components)
       }).catch(() => {});
     }
   });
 }
 
 /**
- * Handle channel management with modern Channel Select Menus
+ * Show channel manager with Channel Select Menu
  */
-async function handleChannels(interaction, source, isInteraction, settings) {
+async function showChannelManager(source, panelMsg, isInteraction, settings) {
   const welcome = settings.welcome || {};
   const channels = welcome.channels || [];
   
   const components = [];
-  components.push(ContainerBuilder.createTextDisplay("## 📺 Greeting Channels"));
+  components.push(ContainerBuilder.createTextDisplay("# 📺 Greeting Channels"));
   components.push(ContainerBuilder.createSeparator());
   
   if (channels.length === 0) {
@@ -219,17 +235,11 @@ async function handleChannels(interaction, source, isInteraction, settings) {
     .setPlaceholder("📺 Select text channels for greetings")
     .setChannelTypes([ChannelType.GuildText])
     .setMinValues(0)
-    .setMaxValues(Math.min(25, Math.max(1, channels.length + 5))); // Allow adding more channels
+    .setMaxValues(Math.min(25, Math.max(1, channels.length + 5)));
   
   const selectRow = new ActionRowBuilder().addComponents(channelSelect);
   
   const buttonRow = InteractionUtils.createButtonRow([
-    {
-      customId: "greet_channel_save",
-      label: "Save Changes",
-      emoji: "✅",
-      style: ButtonStyle.Success,
-    },
     {
       customId: "greet_channel_back",
       label: "Back",
@@ -245,93 +255,106 @@ async function handleChannels(interaction, source, isInteraction, settings) {
     .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
-  await interaction.reply({ ...payload, ephemeral: true });
+  await updatePanel(panelMsg, isInteraction, payload);
   
-  const response = await InteractionUtils.awaitComponent(
-    await interaction.fetchReply(),
-    interaction.user.id,
-    { componentType: [ComponentType.ChannelSelect, ComponentType.Button] },
-    120000
-  );
-  
-  if (!response) {
-    return interaction.editReply({ content: "⏱️ Selection timed out", components: [] });
-  }
-  
-  if (response.customId === "greet_channel_select") {
-    await response.deferUpdate(); // Acknowledge the interaction immediately
-    // Store selected channels temporarily
-    response.selectedChannels = response.values;
-    
-    await interaction.editReply({
-      embeds: [InteractionUtils.createSuccessEmbed(
-        `${getEmoji("success")} Channels Selected\n\n` +
-        `Selected ${response.values.length} channel(s):\n${response.values.map(id => `<#${id}>`).join(", ")}\n\n` +
-        `Click **Save Changes** to apply.`
-      )],
-      components: [buttonRow]
-    });
-    
-    // Wait for save button
-    const saveResponse = await InteractionUtils.awaitComponent(
-      await response.message,
-      interaction.user.id,
-      { componentType: ComponentType.Button },
-      60000
-    );
-    
-    if (!saveResponse || saveResponse.customId === "greet_channel_back") {
-      return showGreetingPanel(source, isInteraction, settings);
-    }
-    
-    if (saveResponse.customId === "greet_channel_save") {
-      const selectedChannels = response.selectedChannels || response.values;
-      
-      // Validate permissions for all selected channels
-      const invalidChannels = [];
-      for (const channelId of selectedChannels) {
-        const channel = interaction.guild.channels.cache.get(channelId);
-        if (channel && !channel.permissionsFor(interaction.guild.members.me).has(["SendMessages", "EmbedLinks"])) {
-          invalidChannels.push(channel.toString());
-        }
-      }
-      
-      if (invalidChannels.length > 0) {
-        await saveResponse.update({
-          embeds: [InteractionUtils.createErrorEmbed(
-            `⚠️ Missing Permissions\n\nI need SendMessages and EmbedLinks permissions in:\n${invalidChannels.join(", ")}`
-          )],
-          components: []
-        });
-        setTimeout(() => showGreetingPanel(source, isInteraction, settings), 3000);
-        return;
-      }
-      
-      // Save the channels
-      if (!settings.welcome) settings.welcome = { enabled: true };
-      settings.welcome.channels = selectedChannels;
-      settings.welcome.enabled = selectedChannels.length > 0;
-      await settings.save();
-      
-      await saveResponse.update({
-        embeds: [InteractionUtils.createSuccessEmbed(
-          `${getEmoji("success")} Greeting Channels Updated!\n\n` +
-          `Active channels: ${selectedChannels.length}\n${selectedChannels.map(id => `<#${id}>`).join(", ")}`
-        )],
-        components: []
-      });
-      
-      setTimeout(() => showGreetingPanel(source, isInteraction, settings), 2000);
-    }
-  } else if (response.customId === "greet_channel_save" || response.customId === "greet_channel_back") {
-    await showGreetingPanel(source, isInteraction, settings);
-  }
+  setupChannelManagerCollector(source, panelMsg, isInteraction, settings);
 }
 
 /**
- * Handle message setting
+ * Setup channel manager collector
  */
-async function handleMessage(interaction, settings) {
+function setupChannelManagerCollector(source, panelMsg, isInteraction, settings) {
+  const userId = isInteraction ? source.user.id : source.author.id;
+  
+  const collector = panelMsg.createMessageComponentCollector({
+    filter: (i) => i.user.id === userId,
+    time: 120000,
+  });
+  
+  collector.on("collect", async (interaction) => {
+    try {
+      if (interaction.customId === "greet_channel_select") {
+        await interaction.deferUpdate();
+        
+        const selectedChannels = interaction.values;
+        
+        // Validate permissions
+        const invalidChannels = [];
+        for (const channelId of selectedChannels) {
+          const channel = interaction.guild.channels.cache.get(channelId);
+          if (channel && !channel.permissionsFor(interaction.guild.members.me).has(["SendMessages", "EmbedLinks"])) {
+            invalidChannels.push(channel.toString());
+          }
+        }
+        
+        if (invalidChannels.length > 0) {
+          const components = [];
+          components.push(ContainerBuilder.createTextDisplay(
+            `# ⚠️ Missing Permissions\n\nI need **SendMessages** and **EmbedLinks** permissions in:\n${invalidChannels.join(", ")}`
+          ));
+          const backButton = InteractionUtils.createButtonRow([{
+            customId: "greet_channel_back",
+            label: "Back",
+            emoji: "◀️",
+            style: ButtonStyle.Secondary,
+          }]);
+          components.push(backButton);
+          
+          const payload = new ContainerBuilder()
+            .addContainer({ accentColor: 0xFF0000, components: components })
+            .build();
+          
+          await updatePanel(panelMsg, isInteraction, payload);
+          return;
+        }
+        
+        // Save channels
+        if (!settings.welcome) settings.welcome = { enabled: true };
+        settings.welcome.channels = selectedChannels;
+        settings.welcome.enabled = selectedChannels.length > 0;
+        await settings.save();
+        
+        collector.stop();
+        
+        // Show success and auto-return to main
+        const components = [];
+        components.push(ContainerBuilder.createTextDisplay(
+          `# ${getEmoji("success")} Greeting Channels Updated!\n\n` +
+          `**Active channels:** ${selectedChannels.length}\n${selectedChannels.map(id => `<#${id}>`).join(", ")}\n\n` +
+          `Returning to main panel...`
+        ));
+        
+        const payload = new ContainerBuilder()
+          .addContainer({ accentColor: 0x00FF00, components: components })
+          .build();
+        
+        await updatePanel(panelMsg, isInteraction, payload);
+        
+        // Auto-return to main panel after 2 seconds
+        setTimeout(() => showGreetingPanel(source, panelMsg, isInteraction, settings, false), 2000);
+        
+      } else if (interaction.customId === "greet_channel_back") {
+        await interaction.deferUpdate();
+        collector.stop();
+        await showGreetingPanel(source, panelMsg, isInteraction, settings, false);
+      }
+    } catch (error) {
+      console.error("Channel manager error:", error);
+      collector.stop();
+    }
+  });
+  
+  collector.on("end", (collected, reason) => {
+    if (reason === "time") {
+      showGreetingPanel(source, panelMsg, isInteraction, settings, false).catch(() => {});
+    }
+  });
+}
+
+/**
+ * Handle message setting with modal
+ */
+async function handleMessage(interaction, source, panelMsg, isInteraction, settings) {
   const currentMessage = settings.welcome?.content || settings.welcome?.embed?.description || "Welcome to {server}, {user}!";
   
   const modal = InteractionUtils.createModal("greet_message_modal", "Set Greeting Message", [
@@ -364,102 +387,154 @@ async function handleMessage(interaction, settings) {
   
   await settings.save();
   
-  await modalSubmit.reply({
-    embeds: [InteractionUtils.createSuccessEmbed(
-      `${emojis.success} Message Updated\n\nPreview: ${message.substring(0, 150)}${message.length > 150 ? '...' : ''}`
-    )],
-    ephemeral: true
-  });
+  await modalSubmit.deferUpdate();
+  
+  // Show success and auto-return to main
+  const components = [];
+  components.push(ContainerBuilder.createTextDisplay(
+    `# ${getEmoji("success")} Message Updated\n\n**Preview:**\n${message.substring(0, 200)}${message.length > 200 ? '...' : ''}\n\nReturning to main panel...`
+  ));
+  
+  const payload = new ContainerBuilder()
+    .addContainer({ accentColor: 0x00FF00, components: components })
+    .build();
+  
+  await updatePanel(panelMsg, isInteraction, payload);
+  
+  setTimeout(() => showGreetingPanel(source, panelMsg, isInteraction, settings, false), 2000);
 }
 
 /**
- * Handle embed settings
+ * Show embed settings
  */
-async function handleEmbedSettings(interaction, settings) {
+async function showEmbedSettings(source, panelMsg, isInteraction, settings) {
   const currentEnabled = settings.welcome?.embed?.enabled || false;
   
   const components = [];
-  components.push(ContainerBuilder.createTextDisplay("## 📋 Embed Mode Settings"));
+  components.push(ContainerBuilder.createTextDisplay("# 📋 Embed Mode Settings"));
   components.push(ContainerBuilder.createSeparator());
   components.push(ContainerBuilder.createTextDisplay(
     `**Current Mode:** ${statusEmoji(currentEnabled)} ${currentEnabled ? 'Embed' : 'Plain Text'}\n\n` +
     `Embed mode shows greetings in a styled embed format instead of plain text.`
   ));
+  components.push(ContainerBuilder.createSeparator());
   
-  const toggleButton = InteractionUtils.createButtonRow([
+  const buttonRow = InteractionUtils.createButtonRow([
     {
       customId: `embed_toggle_${!currentEnabled}`,
       label: currentEnabled ? "Disable Embed" : "Enable Embed",
       emoji: currentEnabled ? "📄" : "📋",
+      style: currentEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
+    },
+    {
+      customId: "greet_embed_back",
+      label: "Back",
+      emoji: "◀️",
       style: ButtonStyle.Secondary,
     },
   ]);
   
-  components.push(toggleButton);
+  components.push(buttonRow);
   
   const payload = new ContainerBuilder()
     .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
-  await interaction.reply({ ...payload, ephemeral: true });
+  await updatePanel(panelMsg, isInteraction, payload);
   
-  const response = await InteractionUtils.awaitComponent(
-    await interaction.fetchReply(),
-    interaction.user.id,
-    { componentType: ComponentType.Button },
-    60000
-  );
+  setupEmbedSettingsCollector(source, panelMsg, isInteraction, settings);
+}
+
+/**
+ * Setup embed settings collector
+ */
+function setupEmbedSettingsCollector(source, panelMsg, isInteraction, settings) {
+  const userId = isInteraction ? source.user.id : source.author.id;
   
-  if (!response) {
-    return interaction.editReply({ content: "⏱️ Configuration timed out", components: [] });
-  }
+  const collector = panelMsg.createMessageComponentCollector({
+    componentType: ComponentType.Button,
+    filter: (i) => i.user.id === userId,
+    time: 60000,
+  });
   
-  const newEnabled = response.customId === "embed_toggle_true";
+  collector.on("collect", async (interaction) => {
+    try {
+      if (interaction.customId.startsWith("embed_toggle_")) {
+        await interaction.deferUpdate();
+        const newEnabled = interaction.customId === "embed_toggle_true";
+        
+        if (!settings.welcome) settings.welcome = {};
+        if (!settings.welcome.embed) {
+          settings.welcome.embed = {
+            enabled: newEnabled,
+            description: "Welcome to {server}, {user}!",
+            color: "#FFFFFF",
+            thumbnail: true,
+            footer: "Member #{memberCount}",
+          };
+        } else {
+          settings.welcome.embed.enabled = newEnabled;
+        }
+        
+        await settings.save();
+        
+        collector.stop();
+        
+        // Show success and auto-return
+        const components = [];
+        components.push(ContainerBuilder.createTextDisplay(
+          `# ${getEmoji("success")} Embed Mode ${newEnabled ? 'Enabled' : 'Disabled'}\n\n` +
+          `Greetings will now use ${newEnabled ? '**embed**' : '**plain text**'} format.\n\nReturning to main panel...`
+        ));
+        
+        const payload = new ContainerBuilder()
+          .addContainer({ accentColor: 0x00FF00, components: components })
+          .build();
+        
+        await updatePanel(panelMsg, isInteraction, payload);
+        setTimeout(() => showGreetingPanel(source, panelMsg, isInteraction, settings, false), 2000);
+        
+      } else if (interaction.customId === "greet_embed_back") {
+        await interaction.deferUpdate();
+        collector.stop();
+        await showGreetingPanel(source, panelMsg, isInteraction, settings, false);
+      }
+    } catch (error) {
+      console.error("Embed settings error:", error);
+      collector.stop();
+    }
+  });
   
-  if (!settings.welcome) settings.welcome = {};
-  if (!settings.welcome.embed) {
-    settings.welcome.embed = {
-      enabled: newEnabled,
-      description: "Welcome to {server}, {user}!",
-      color: "#FFFFFF",
-      thumbnail: true,
-      footer: "Member #{memberCount}",
-    };
-  } else {
-    settings.welcome.embed.enabled = newEnabled;
-  }
-  
-  await settings.save();
-  
-  await response.update({
-    content: `${getEmoji("success")} Embed Mode ${newEnabled ? 'Enabled' : 'Disabled'}\n\nGreetings will now use ${newEnabled ? 'embed' : 'plain text'} format`,
-    embeds: [],
-    components: []
+  collector.on("end", (collected, reason) => {
+    if (reason === "time") {
+      showGreetingPanel(source, panelMsg, isInteraction, settings, false).catch(() => {});
+    }
   });
 }
 
 /**
- * Handle auto-delete
+ * Show auto-delete settings
  */
-async function handleAutoDelete(interaction, settings) {
+async function showAutoDeleteSettings(source, panelMsg, isInteraction, settings) {
   const currentEnabled = settings.welcome?.auto_delete?.enabled || false;
   const currentDelay = settings.welcome?.auto_delete?.delay || 10;
   
   const components = [];
-  components.push(ContainerBuilder.createTextDisplay("## 🗑️ Auto-Delete Settings"));
+  components.push(ContainerBuilder.createTextDisplay("# 🗑️ Auto-Delete Settings"));
   components.push(ContainerBuilder.createSeparator());
   components.push(ContainerBuilder.createTextDisplay(
     `**Status:** ${statusEmoji(currentEnabled)} ${currentEnabled ? 'Enabled' : 'Disabled'}\n` +
     `**Delay:** ${currentDelay} seconds\n\n` +
     `Auto-delete removes greeting messages after a delay to keep channels clean.`
   ));
+  components.push(ContainerBuilder.createSeparator());
   
-  const toggleButton = InteractionUtils.createButtonRow([
+  const buttonRow = InteractionUtils.createButtonRow([
     {
       customId: `autodel_toggle_${!currentEnabled}`,
       label: currentEnabled ? "Disable" : "Enable",
       emoji: currentEnabled ? "🔴" : "🟢",
-      style: ButtonStyle.Secondary,
+      style: currentEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
     },
     {
       customId: "autodel_config",
@@ -468,70 +543,121 @@ async function handleAutoDelete(interaction, settings) {
       style: ButtonStyle.Secondary,
       disabled: !currentEnabled,
     },
+    {
+      customId: "greet_autodel_back",
+      label: "Back",
+      emoji: "◀️",
+      style: ButtonStyle.Secondary,
+    },
   ]);
   
-  components.push(toggleButton);
+  components.push(buttonRow);
   
   const payload = new ContainerBuilder()
     .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
-  await interaction.reply({ ...payload, ephemeral: true });
+  await updatePanel(panelMsg, isInteraction, payload);
   
-  const response = await InteractionUtils.awaitComponent(
-    await interaction.fetchReply(),
-    interaction.user.id,
-    { componentType: ComponentType.Button },
-    60000
-  );
+  setupAutoDeleteCollector(source, panelMsg, isInteraction, settings);
+}
+
+/**
+ * Setup auto-delete collector
+ */
+function setupAutoDeleteCollector(source, panelMsg, isInteraction, settings) {
+  const userId = isInteraction ? source.user.id : source.author.id;
   
-  if (!response) {
-    return interaction.editReply({ content: "⏱️ Configuration timed out", components: [] });
-  }
+  const collector = panelMsg.createMessageComponentCollector({
+    componentType: ComponentType.Button,
+    filter: (i) => i.user.id === userId,
+    time: 60000,
+  });
   
-  if (response.customId.startsWith("autodel_toggle_")) {
-    const newEnabled = response.customId === "autodel_toggle_true";
-    
-    if (!settings.welcome) settings.welcome = {};
-    settings.welcome.auto_delete = { enabled: newEnabled, delay: currentDelay };
-    await settings.save();
-    
-    await response.update({
-      content: `${getEmoji("success")} Auto-Delete ${newEnabled ? 'Enabled' : 'Disabled'}`,
-      embeds: [],
-      components: []
-    });
-  } else if (response.customId === "autodel_config") {
-    const modal = InteractionUtils.createModal("autodel_delay_modal", "Set Auto-Delete Delay", [
-      {
-        customId: "delay",
-        label: "Delay in Seconds (5-300)",
-        style: TextInputStyle.Short,
-        placeholder: "e.g., 10",
-        required: true,
-        value: currentDelay.toString(),
-      },
-    ]);
-    
-    await response.showModal(modal);
-    
-    const modalSubmit = await InteractionUtils.awaitModalSubmit(response, "autodel_delay_modal", 120000);
-    if (!modalSubmit) return;
-    
-    const delay = parseInt(modalSubmit.fields.getTextInputValue("delay")) || 10;
-    const clampedDelay = Math.max(5, Math.min(300, delay));
-    
-    if (!settings.welcome) settings.welcome = {};
-    settings.welcome.auto_delete = { enabled: true, delay: clampedDelay };
-    await settings.save();
-    
-    await modalSubmit.reply({
-      embeds: [InteractionUtils.createSuccessEmbed(
-        `${getEmoji("success")} Auto-Delete Configured\n\nGreetings will be deleted after ${clampedDelay} seconds`
-      )],
-      ephemeral: true
-    });
-  }
+  collector.on("collect", async (interaction) => {
+    try {
+      if (interaction.customId.startsWith("autodel_toggle_")) {
+        await interaction.deferUpdate();
+        const newEnabled = interaction.customId === "autodel_toggle_true";
+        
+        if (!settings.welcome) settings.welcome = {};
+        settings.welcome.auto_delete = { enabled: newEnabled, delay: settings.welcome.auto_delete?.delay || 10 };
+        await settings.save();
+        
+        collector.stop();
+        
+        // Show success and auto-return
+        const components = [];
+        components.push(ContainerBuilder.createTextDisplay(
+          `# ${getEmoji("success")} Auto-Delete ${newEnabled ? 'Enabled' : 'Disabled'}\n\nReturning to main panel...`
+        ));
+        
+        const payload = new ContainerBuilder()
+          .addContainer({ accentColor: 0x00FF00, components: components })
+          .build();
+        
+        await updatePanel(panelMsg, isInteraction, payload);
+        setTimeout(() => showGreetingPanel(source, panelMsg, isInteraction, settings, false), 2000);
+        
+      } else if (interaction.customId === "autodel_config") {
+        const currentDelay = settings.welcome?.auto_delete?.delay || 10;
+        const modal = InteractionUtils.createModal("autodel_delay_modal", "Set Auto-Delete Delay", [
+          {
+            customId: "delay",
+            label: "Delay in Seconds (5-300)",
+            style: TextInputStyle.Short,
+            placeholder: "e.g., 10",
+            required: true,
+            value: currentDelay.toString(),
+          },
+        ]);
+        
+        await interaction.showModal(modal);
+        
+        const modalSubmit = await InteractionUtils.awaitModalSubmit(interaction, "autodel_delay_modal", 120000);
+        if (!modalSubmit) return;
+        
+        const delay = parseInt(modalSubmit.fields.getTextInputValue("delay")) || 10;
+        const clampedDelay = Math.max(5, Math.min(300, delay));
+        
+        if (!settings.welcome) settings.welcome = {};
+        settings.welcome.auto_delete = { enabled: true, delay: clampedDelay };
+        await settings.save();
+        
+        await modalSubmit.deferUpdate();
+        
+        collector.stop();
+        
+        // Show success and auto-return
+        const components = [];
+        components.push(ContainerBuilder.createTextDisplay(
+          `# ${getEmoji("success")} Auto-Delete Configured\n\n` +
+          `Greetings will be deleted after **${clampedDelay} seconds**.\n\nReturning to main panel...`
+        ));
+        
+        const payload = new ContainerBuilder()
+          .addContainer({ accentColor: 0x00FF00, components: components })
+          .build();
+        
+        await updatePanel(panelMsg, isInteraction, payload);
+        setTimeout(() => showGreetingPanel(source, panelMsg, isInteraction, settings, false), 2000);
+        
+      } else if (interaction.customId === "greet_autodel_back") {
+        await interaction.deferUpdate();
+        collector.stop();
+        await showGreetingPanel(source, panelMsg, isInteraction, settings, false);
+      }
+    } catch (error) {
+      console.error("Auto-delete settings error:", error);
+      collector.stop();
+    }
+  });
+  
+  collector.on("end", (collected, reason) => {
+    if (reason === "time") {
+      showGreetingPanel(source, panelMsg, isInteraction, settings, false).catch(() => {});
+    }
+  });
 }
 
 /**
@@ -573,11 +699,11 @@ async function handleTest(interaction, source, settings) {
 }
 
 /**
- * Show variables
+ * Show variables panel
  */
-async function handleVariables(interaction) {
+async function showVariables(source, panelMsg, isInteraction, settings) {
   const components = [];
-  components.push(ContainerBuilder.createTextDisplay("## 📝 Available Variables"));
+  components.push(ContainerBuilder.createTextDisplay("# 📝 Available Variables"));
   components.push(ContainerBuilder.createSeparator());
   components.push(ContainerBuilder.createTextDisplay(
     "**User Variables:**\n" +
@@ -598,10 +724,56 @@ async function handleVariables(interaction) {
     "**Example:**\n" +
     "`Welcome {user} to {server}! You are member #{memberCount}`"
   ));
+  components.push(ContainerBuilder.createSeparator());
+  
+  const backButton = InteractionUtils.createButtonRow([
+    {
+      customId: "greet_variables_back",
+      label: "Back",
+      emoji: "◀️",
+      style: ButtonStyle.Secondary,
+    },
+  ]);
+  
+  components.push(backButton);
   
   const payload = new ContainerBuilder()
     .addContainer({ accentColor: 0xFFFFFF, components: components })
     .build();
   
-  await interaction.reply({ ...payload, ephemeral: true });
+  await updatePanel(panelMsg, isInteraction, payload);
+  
+  setupVariablesCollector(source, panelMsg, isInteraction, settings);
+}
+
+/**
+ * Setup variables collector
+ */
+function setupVariablesCollector(source, panelMsg, isInteraction, settings) {
+  const userId = isInteraction ? source.user.id : source.author.id;
+  
+  const collector = panelMsg.createMessageComponentCollector({
+    componentType: ComponentType.Button,
+    filter: (i) => i.user.id === userId,
+    time: 60000,
+  });
+  
+  collector.on("collect", async (interaction) => {
+    try {
+      if (interaction.customId === "greet_variables_back") {
+        await interaction.deferUpdate();
+        collector.stop();
+        await showGreetingPanel(source, panelMsg, isInteraction, settings, false);
+      }
+    } catch (error) {
+      console.error("Variables panel error:", error);
+      collector.stop();
+    }
+  });
+  
+  collector.on("end", (collected, reason) => {
+    if (reason === "time") {
+      showGreetingPanel(source, panelMsg, isInteraction, settings, false).catch(() => {});
+    }
+  });
 }

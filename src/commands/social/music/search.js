@@ -20,7 +20,7 @@ const search_prefix = {
  * @type {import("@structures/Command")}
  */
 module.exports = {
-  name: "search",
+  name: "musicsearch",
   description: "search for matching songs on youtube",
   category: "MUSIC",
   botPermissions: ["EmbedLinks"],
@@ -28,6 +28,7 @@ module.exports = {
     enabled: true,
     usage: "<song-name>",
     minArgsCount: 1,
+    aliases: ["msearch"],
   },
   slashCommand: {
     enabled: true,
