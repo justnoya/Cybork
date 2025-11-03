@@ -258,9 +258,8 @@ async function handleAntiSpam(interaction, settings) {
     await settings.save();
     
     await response.update({
-      embeds: [InteractionUtils.createSuccessEmbed(
-        `${getEmoji("success")} Anti-Spam ${newEnabled ? 'enabled' : 'disabled'}`
-      )],
+      content: `${getEmoji("success")} Anti-Spam ${newEnabled ? 'enabled' : 'disabled'}`,
+      embeds: [],
       components: []
     });
   } else if (response.customId === "spam_config") {
@@ -404,9 +403,8 @@ async function handleAntiZalgo(interaction, settings) {
     await settings.save();
     
     await response.update({
-      embeds: [InteractionUtils.createSuccessEmbed(
-        `${getEmoji("success")} Anti-Zalgo ${newEnabled ? 'enabled' : 'disabled'}`
-      )],
+      content: `${getEmoji("success")} Anti-Zalgo ${newEnabled ? 'enabled' : 'disabled'}`,
+      embeds: [],
       components: []
     });
   } else if (response.customId === "zalgo_config") {
@@ -501,9 +499,8 @@ async function handleAntiCaps(interaction, settings) {
     await settings.save();
     
     await response.update({
-      embeds: [InteractionUtils.createSuccessEmbed(
-        `${getEmoji("success")} Anti-Caps ${newEnabled ? 'enabled' : 'disabled'}`
-      )],
+      content: `${getEmoji("success")} Anti-Caps ${newEnabled ? 'enabled' : 'disabled'}`,
+      embeds: [],
       components: []
     });
   } else if (response.customId === "caps_config") {
@@ -640,11 +637,10 @@ async function handleWhitelist(interaction, settings) {
       await settings.save();
       
       await saveResponse.update({
-        embeds: [InteractionUtils.createSuccessEmbed(
-          `${getEmoji("success")} Whitelist Updated!\n\n` +
+        content: `${getEmoji("success")} Whitelist Updated!\n\n` +
           `${settings.automod.wh_channels.length} channel(s) are now exempt from automod:\n` +
-          `${settings.automod.wh_channels.map(id => `<#${id}>`).join(", ")}`
-        )],
+          `${settings.automod.wh_channels.map(id => `<#${id}>`).join(", ")}`,
+        embeds: [],
         components: []
       });
     } else if (saveResponse.customId === "whitelist_clear") {
@@ -653,18 +649,16 @@ async function handleWhitelist(interaction, settings) {
       await settings.save();
       
       await saveResponse.update({
-        embeds: [InteractionUtils.createSuccessEmbed(
-          `${getEmoji("success")} Whitelist Cleared!\n\nAll channels are now subject to automod rules.`
-        )],
+        content: `${getEmoji("success")} Whitelist Cleared!\n\nAll channels are now subject to automod rules.`,
+        embeds: [],
         components: []
       });
     }
   } else if (response.customId === "whitelist_save") {
     // Save with current whitelist
     await response.update({
-      embeds: [InteractionUtils.createSuccessEmbed(
-        `${getEmoji("success")} No changes made to whitelist.`
-      )],
+      content: `${getEmoji("success")} No changes made to whitelist.`,
+      embeds: [],
       components: []
     });
   } else if (response.customId === "whitelist_clear") {
@@ -673,9 +667,8 @@ async function handleWhitelist(interaction, settings) {
     await settings.save();
     
     await response.update({
-      embeds: [InteractionUtils.createSuccessEmbed(
-        `${getEmoji("success")} Whitelist Cleared!\n\nAll channels are now subject to automod rules.`
-      )],
+      content: `${getEmoji("success")} Whitelist Cleared!\n\nAll channels are now subject to automod rules.`,
+      embeds: [],
       components: []
     });
   }

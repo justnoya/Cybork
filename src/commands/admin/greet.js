@@ -432,9 +432,8 @@ async function handleEmbedSettings(interaction, settings) {
   await settings.save();
   
   await response.update({
-    embeds: [InteractionUtils.createSuccessEmbed(
-      `${getEmoji("success")} Embed Mode ${newEnabled ? 'Enabled' : 'Disabled'}\n\nGreetings will now use ${newEnabled ? 'embed' : 'plain text'} format`
-    )],
+    content: `${getEmoji("success")} Embed Mode ${newEnabled ? 'Enabled' : 'Disabled'}\n\nGreetings will now use ${newEnabled ? 'embed' : 'plain text'} format`,
+    embeds: [],
     components: []
   });
 }
@@ -498,9 +497,8 @@ async function handleAutoDelete(interaction, settings) {
     await settings.save();
     
     await response.update({
-      embeds: [InteractionUtils.createSuccessEmbed(
-        `${getEmoji("success")} Auto-Delete ${newEnabled ? 'Enabled' : 'Disabled'}`
-      )],
+      content: `${getEmoji("success")} Auto-Delete ${newEnabled ? 'Enabled' : 'Disabled'}`,
+      embeds: [],
       components: []
     });
   } else if (response.customId === "autodel_config") {

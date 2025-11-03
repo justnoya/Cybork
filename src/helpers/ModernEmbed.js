@@ -52,6 +52,15 @@ class ModernEmbed {
   }
 
   /**
+   * Set description only
+   * @param {string} description - Description text
+   */
+  setDescription(description) {
+    this.embed.setDescription(description);
+    return this;
+  }
+
+  /**
    * Set thumbnail image
    * @param {string} url - Image URL
    */

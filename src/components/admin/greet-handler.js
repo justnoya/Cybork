@@ -22,8 +22,6 @@ module.exports = async function handleGreetInteraction(interaction) {
         await showAutoDeleteSettings(interaction);
       } else if (action === "variables") {
         await showVariableList(interaction);
-      } else if (action === "channel") {
-        await handleChannelButton(interaction, parts[2]);
       } else if (action === "toggle") {
         await handleToggle(interaction, parts[2]);
       }
@@ -109,13 +107,20 @@ async function showChannelManager(interaction) {
     });
   }
 
-  const menuOptions = textChannels.map(ch => ({
-    label: `#${ch.name}`,
-    value: ch.id,
-    description: `${ch.memberCount || 0} members can view`,
-    emoji: channels.includes(ch.id) ? EmojiManager.get("yes", "✅") : null,
-    default: channels.includes(ch.id)
-  }));
+  const menuOptions = textChannels.map(ch => {
+    const option = {
+      label: `#${ch.name}`,
+      value: ch.id,
+      description: `${ch.memberCount || 0} members can view`,
+      default: channels.includes(ch.id)
+    };
+    
+    if (channels.includes(ch.id)) {
+      option.emoji = EmojiManager.get("yes", "✅");
+    }
+    
+    return option;
+  });
 
   const selectMenu = new StringSelectMenuBuilder()
     .setCustomId("greet_channels_toggle")
