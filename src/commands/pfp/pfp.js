@@ -13,6 +13,8 @@ const { EMBED_COLORS } = require("@root/config.js");
 const { getBuffer } = require("@helpers/HttpUtils");
 const PinterestScraper = require("@helpers/PinterestScraper");
 const InteractionUtils = require("@helpers/InteractionUtils");
+const ContainerBuilder = require("@helpers/ContainerBuilder");
+const { getEmoji } = require("@helpers/EmojiUtils");
 
 /**
  * @type {import("@structures/Command")}
@@ -24,7 +26,7 @@ module.exports = {
   botPermissions: ["SendMessages", "EmbedLinks", "AttachFiles"],
   cooldown: 5,
   command: {
-    enabled: false,
+    enabled: true,
     usage: "[query]",
   },
   slashCommand: {
@@ -68,25 +70,37 @@ module.exports = {
  * Show main menu with preset options
  */
 async function showMainMenu(source, isInteraction) {
-  const embed = InteractionUtils.createThemedEmbed({
-    title: "🖼️ Profile Picture Search",
-    description: "Choose a preset category or search with a custom query:",
-    fields: [
-      {
-        name: "Preset Categories",
-        value: "• Aesthetic Boy Real PFP\n• Aesthetic Girl Real PFP",
-        inline: false,
-      },
-      {
-        name: "Custom Search",
-        value: "Click the button below to enter your own search query",
-        inline: false,
-      },
-    ],
-    footer: "Results show 5 unique images",
-    timestamp: true,
-  });
-
+  const components = [];
+  
+  components.push(ContainerBuilder.createTextDisplay("# 🖼️ Profile Picture Search"));
+  components.push(ContainerBuilder.createSeparator());
+  
+  components.push(ContainerBuilder.createTextDisplay(
+    "## Find Your Perfect PFP\n" +
+    "Discover unique profile pictures from Pinterest with our advanced search system."
+  ));
+  
+  components.push(ContainerBuilder.createSeparator());
+  
+  components.push(ContainerBuilder.createTextDisplay(
+    "**🎨 Preset Categories**\n" +
+    "• **Aesthetic Boy** - Curated collection of real aesthetic boy profile pictures\n" +
+    "• **Aesthetic Girl** - Premium selection of real aesthetic girl profile pictures\n\n" +
+    "**🔍 Custom Search**\n" +
+    "• Enter any search query to find specific styles\n" +
+    "• Examples: *anime aesthetic*, *dark gothic*, *nature vibes*"
+  ));
+  
+  components.push(ContainerBuilder.createSeparator());
+  
+  components.push(ContainerBuilder.createTextDisplay(
+    "**✨ Features:**\n" +
+    "• 5 unique images per search\n" +
+    "• No duplicates guaranteed\n" +
+    "• Direct download available\n" +
+    "• Pinterest links included"
+  ));
+  
   const row1 = InteractionUtils.createButtonRow([
     {
       customId: "pfp_boy",
@@ -110,10 +124,20 @@ async function showMainMenu(source, isInteraction) {
       style: ButtonStyle.Success,
     },
   ]);
+  
+  components.push(row1);
+  components.push(row2);
+  
+  const payload = new ContainerBuilder()
+    .addContainer({
+      accentColor: 0x5865F2,
+      components: components
+    })
+    .build();
 
   const msg = isInteraction
-    ? await source.editReply({ embeds: [embed], components: [row1, row2] })
-    : await source.channel.send({ embeds: [embed], components: [row1, row2] });
+    ? await source.editReply(payload)
+    : await source.channel.send(payload);
 
   const collector = msg.createMessageComponentCollector({
     componentType: ComponentType.Button,
@@ -148,7 +172,9 @@ async function showMainMenu(source, isInteraction) {
   });
 
   collector.on("end", () => {
-    msg.edit({ components: InteractionUtils.disableComponents([row1, row2]) }).catch(() => {});
+    if (msg && msg.components) {
+      msg.edit({ components: InteractionUtils.disableComponents(msg.components) }).catch(() => {});
+    }
   });
 }
 

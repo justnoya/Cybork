@@ -241,11 +241,10 @@ async function showWhitelistSetup(interaction, source, isInteraction, settings, 
     response.tempWhitelist = selectedUsers;
     
     await response.update({
-      embeds: [InteractionUtils.createSuccessEmbed(
-        `${getEmoji("success")} Admins Selected\n\n` +
+      content: `${getEmoji("success")} Admins Selected\n\n` +
         `${selectedUsers.length} user(s) selected:\n${selectedUsers.map(id => `<@${id}>`).join(", ")}\n\n` +
-        `Click **Save Whitelist** to add them.`
-      )],
+        `Click **Save Whitelist** to add them.`,
+      embeds: [],
       components: [buttonRow]
     });
     
