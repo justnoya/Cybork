@@ -27,16 +27,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node bot.js"
-
-[[workflows.workflow]]
-name = "Start All Services"
-author = 48491915
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm start"
+args = "node start.js"
 
 [agent]
 expertMode = true
