@@ -9,13 +9,13 @@ const BASE_RECONNECT_DELAY = 5000;
 
 async function attemptReconnect() {
   if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-    error(`Mongoose: Maximum reconnection attempts (${MAX_RECONNECT_ATTEMPTS}) reached`);
+    error(`Database recovery failed: Maximum attempts (${MAX_RECONNECT_ATTEMPTS}) reached`);
     return;
   }
 
   reconnectAttempts++;
   const delay = BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts - 1);
-  warn(`Mongoose: Attempting to reconnect... (Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+  warn(`Database connection interrupted: Attempting recovery (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
 
   try {
     await mongoose.connect(process.env.MONGO_CONNECTION, {
@@ -24,10 +24,10 @@ async function attemptReconnect() {
       maxPoolSize: 10,
       minPoolSize: 2,
     });
-    success("Mongoose: Reconnection successful");
+    success("Database recovery successful");
     reconnectAttempts = 0;
   } catch (err) {
-    error(`Mongoose: Reconnection attempt ${reconnectAttempts} failed`, err);
+    error(`Database recovery attempt ${reconnectAttempts} failed`, err);
     if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
       setTimeout(attemptReconnect, delay);
     }
@@ -36,7 +36,7 @@ async function attemptReconnect() {
 
 module.exports = {
   async initializeMongoose() {
-    log(`Connecting to MongoDb...`);
+    log(`Establishing connection to Database cluster...`);
 
     try {
       await mongoose.connect(process.env.MONGO_CONNECTION, {
@@ -46,20 +46,20 @@ module.exports = {
         minPoolSize: 2,
       });
 
-      success("Mongoose: Database connection established");
+      success("Database connection established");
 
       mongoose.connection.on("disconnected", () => {
-        warn("Mongoose: Database connection lost. Attempting to reconnect...");
+        warn("Database connection lost. Initiating automatic recovery...");
         attemptReconnect();
       });
 
       mongoose.connection.on("reconnected", () => {
-        success("Mongoose: Database reconnected successfully");
+        success("Database synchronization restored");
         reconnectAttempts = 0;
       });
 
       mongoose.connection.on("error", (err) => {
-        error("Mongoose: Database connection error", err);
+        error("Critical database error", err);
         if (mongoose.connection.readyState === 0) {
           attemptReconnect();
         }
@@ -67,7 +67,7 @@ module.exports = {
 
       return mongoose.connection;
     } catch (err) {
-      error("Mongoose: Initial connection failed, starting reconnect attempts", err);
+      error("Database initialization failed. Starting automated recovery sequence...", err);
       attemptReconnect();
     }
   },

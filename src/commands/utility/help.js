@@ -156,15 +156,15 @@ async function getHelpMenu(context, prefix) {
   }
 
   const mainText = ContainerBuilder.createTextDisplay(
-    `# ${client?.user?.username || 'Bot'} Command Menu\n\n` +
-    `**Command Information**\n` +
-    `Select a category from the menu below to view available commands.\n\n` +
-    `Use \`${prefixText}exp <command>\` to get detailed command information and examples.\n\n` +
-    `**Found a Bug?**\n` +
-    `Report issues using \`${prefixText}reportbug\` to help us improve the bot.\n\n` +
-    `**Need Extra Help?**\n` +
-    `Visit our **[Support Server](${SUPPORT_SERVER})**\n\n` +
-    `Developer: **${developerText}**`
+    `# ${client?.user?.username || 'Bot'} Command Catalog\n\n` +
+    `**Welcome to the Hub**\n` +
+    `Explore my capabilities by selecting a category from the dropdown menu below. Each module contains a specialized set of tools designed to enhance your server experience.\n\n` +
+    `**Quick Tips**\n` +
+    `• Use \`${prefixText}help <command>\` for deep-dive technical specs.\n` +
+    `• Encountered a glitch? Run \`${prefixText}reportbug\` to alert the engineering team.\n\n` +
+    `**Resource Center**\n` +
+    `• **[Join the Community](${SUPPORT_SERVER})** for live support and updates.\n\n` +
+    `Developed with 🤍 by **${developerText}**`
   );
 
   // Categories to exclude from help dropdown (OWNER will be conditionally added)
@@ -399,8 +399,8 @@ function getCategoryEmbed(client, category, prefix, page = 0) {
 
   if (commands.length === 0) {
     const emptyText = ContainerBuilder.createTextDisplay(
-      `## ${mapping.name}\n\nThis category is currently empty. Check back later for new commands!\n\n` +
-      `*Powered by Blackbit Studio*`
+      `## ${mapping.name} Module\n\nThis module is currently undergoing maintenance or has no active commands. Please check back later!\n\n` +
+      `*Powered by ${client.config.DEVELOPER}*`
     );
 
     const payload = new ContainerBuilder()
@@ -452,14 +452,14 @@ function getCategoryEmbed(client, category, prefix, page = 0) {
   const commandsList = pageCommands.join('\n');
 
   // Format header with page number in bold code block format
-  const categoryName = `${mapping.name} Commands`;
+  const categoryName = `${mapping.name} Module`;
   const pageInfo = `**\`\`\`               (Page ${page + 1}/${totalPages})               \`\`\`**`;
 
   const categoryText = ContainerBuilder.createTextDisplay(
     `## ${categoryName}\n${pageInfo}\n\n` +
     `${commandsList}\n\n` +
-    `*Use \`${prefix || '!'}help <command>\` for detailed information*\n\n` +
-    `*Powered by Blackbit Studio*`
+    `*Run \`${prefix || '!'}help <command>\` for detailed syntax and usage rules.*\n\n` +
+    `*Powered by ${client.config.DEVELOPER}*`
   );
 
   const navButtons = getNavigationButtons(totalPages, page);

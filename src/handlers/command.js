@@ -56,14 +56,14 @@ module.exports = {
     // check user permissions
     if (cmd.userPermissions && cmd.userPermissions?.length > 0) {
       if (!message.channel.permissionsFor(message.member).has(cmd.userPermissions)) {
-        return message.safeReply(`You need ${parsePermissions(cmd.userPermissions)} for this command`);
+        return message.safeReply(`❌ You need ${parsePermissions(cmd.userPermissions)} for this command`);
       }
     }
 
     // check bot permissions
     if (cmd.botPermissions && cmd.botPermissions.length > 0) {
       if (!message.channel.permissionsFor(message.guild.members.me).has(cmd.botPermissions)) {
-        return message.safeReply(`I need ${parsePermissions(cmd.botPermissions)} for this command`);
+        return message.safeReply(`⚠️ I need ${parsePermissions(cmd.botPermissions)} for this command`);
       }
     }
 
@@ -77,7 +77,7 @@ module.exports = {
     if (cmd.cooldown > 0) {
       const remaining = getRemainingCooldown(message.author.id, cmd);
       if (remaining > 0) {
-        return message.safeReply(`You are on cooldown. You can again use the command in \`${timeformat(remaining)}\``);
+        return message.safeReply(`⏳ You are on cooldown. Please wait \`${timeformat(remaining)}\``);
       }
     }
 
@@ -123,7 +123,7 @@ module.exports = {
     if (interaction.member && cmd.userPermissions?.length > 0) {
       if (!interaction.member.permissions.has(cmd.userPermissions)) {
         return interaction.reply({
-          content: `You need ${parsePermissions(cmd.userPermissions)} for this command`,
+          content: `❌ You need ${parsePermissions(cmd.userPermissions)} for this command`,
           ephemeral: true,
         });
       }
@@ -133,7 +133,7 @@ module.exports = {
     if (cmd.botPermissions && cmd.botPermissions.length > 0) {
       if (!interaction.guild.members.me.permissions.has(cmd.botPermissions)) {
         return interaction.reply({
-          content: `I need ${parsePermissions(cmd.botPermissions)} for this command`,
+          content: `⚠️ I need ${parsePermissions(cmd.botPermissions)} for this command`,
           ephemeral: true,
         });
       }
@@ -144,7 +144,7 @@ module.exports = {
       const remaining = getRemainingCooldown(interaction.user.id, cmd);
       if (remaining > 0) {
         return interaction.reply({
-          content: `You are on cooldown. You can again use the command in \`${timeformat(remaining)}\``,
+          content: `⏳ You are on cooldown. Please wait \`${timeformat(remaining)}\``,
           ephemeral: true,
         });
       }
@@ -182,8 +182,8 @@ module.exports = {
         desc += `**Cooldown:** ${timeformat(cmd.cooldown)}`;
       }
     } else {
-      desc += `\`\`\`css\n${prefix}${invoke || cmd.name} ${cmd.command.usage}\`\`\``;
-      if (cmd.description !== "") desc += `\n**Help:** ${cmd.description}`;
+      desc += `\`\`\`ansi\n\u001b[1;37mUsage:\u001b[0m \u001b[0;36m${prefix}${invoke || cmd.name} ${cmd.command.usage}\u001b[0m\n\`\`\``;
+      if (cmd.description !== "") desc += `\n**Info:** ${cmd.description}`;
       if (cmd.command.aliases && cmd.command.aliases.length > 0) {
         desc += `\n**Aliases:** ${cmd.command.aliases.map(a => `\`${a}\``).join(", ")}`;
       }

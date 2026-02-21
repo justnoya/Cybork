@@ -13,13 +13,13 @@ module.exports = {
     TEST_GUILD_ID: "xxxxxxxxxxx", // Guild ID where the interactions should be registered. [** Test you commands here first **]
   },
   EMBED_COLORS: {
-    BOT_EMBED: "#FFFFFF",
-    TRANSPARENT: "#FFFFFF",
-    SUCCESS: "#FFFFFF",
-    ERROR: "#FFFFFF",
-    WARNING: "#FFFFFF",
-    PRIMARY: "#FFFFFF",
-    SECONDARY: "#FFFFFF",
+    BOT_EMBED: "#2B2D31",
+    TRANSPARENT: "#2B2D31",
+    SUCCESS: "#43B581",
+    ERROR: "#F04747",
+    WARNING: "#FAA61A",
+    PRIMARY: "#5865F2",
+    SECONDARY: "#4F545C",
   },
   CACHE_SIZE: {
     GUILDS: 100,
@@ -27,7 +27,7 @@ module.exports = {
     MEMBERS: 10000,
   },
   MESSAGES: {
-    API_ERROR: "Unexpected Backend Error! Try again later or contact support server",
+    API_ERROR: "The system encountered an unexpected internal error. Please try again or alert our support team.",
   },
 
   // PLUGINS
