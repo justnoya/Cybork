@@ -16,8 +16,7 @@ const colors = {
 };
 
 function log(message, color = colors.reset) {
-  const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
-  console.log(`${colors.dim}[${timestamp}]${colors.reset} ${color}${message}${colors.reset}`);
+  console.log(`${color}${message}${colors.reset}`);
 }
 
 const lavalinkPath = path.join(__dirname, 'Lavalink.jar');
@@ -38,18 +37,18 @@ function getLoader(text) {
 // Auto-fix vulnerabilities on startup
 async function autoFixVulnerabilities() {
   return new Promise((resolve) => {
-    const loader = getLoader('Running system optimization audit...');
+    const loader = getLoader('System check');
     
     const timeout = setTimeout(() => {
       clearInterval(loader);
-      process.stdout.write('\r\x1b[32m✓\x1b[0m Optimization audit complete           \n');
+      process.stdout.write('\r\x1b[32m•\x1b[0m System optimized                      \n');
       resolve();
-    }, 3000);
+    }, 1500);
     
     exec('npm audit fix --force > /dev/null 2>&1', (error) => {
       clearTimeout(timeout);
       clearInterval(loader);
-      process.stdout.write('\r\x1b[32m✓\x1b[0m Security patches synchronized         \n');
+      process.stdout.write('\r\x1b[32m•\x1b[0m Security patched                      \n');
       resolve();
     });
   });
@@ -87,7 +86,7 @@ async function cleanOldLogs() {
 }
 
 function startBot() {
-  log('🤖 Initializing Core Client...', colors.cyan);
+  log('🤖 Initializing Client...', colors.cyan);
   
   const bot = spawn('node', ['bot.js'], {
     cwd: __dirname,
@@ -164,16 +163,9 @@ function startBot() {
 async function main() {
   console.clear();
   console.log('\x1b[36m' + `
-    ___     _             _    
-   / __|  _| |__  ___ _ _| |__ 
-  | (_| || | '_ \\/ _ \\ '_| / / 
-   \\___\\_, |_.__/\\___/_| |_\\_\\ 
-       |__/                     
+   Welcome to Cybork Core
   ` + '\x1b[0m');
-  console.log('\x1b[2m' + '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' + '\x1b[0m');
-  console.log('\x1b[1m\x1b[36m' + '        Cybork Advanced Management System' + '\x1b[0m');
-  console.log('\x1b[36m' + '             Enterprise-Grade Core' + '\x1b[0m');
-  console.log('\x1b[2m' + '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' + '\x1b[0m\n');
+  console.log('\x1b[2m' + '────────────────────────────────────────────────────' + '\x1b[0m\n');
 
   // Auto-fix vulnerabilities
   await autoFixVulnerabilities();
@@ -183,15 +175,15 @@ async function main() {
 
   // Check if node_modules exists
   if (!fs.existsSync(path.join(__dirname, 'node_modules'))) {
-    log('📦 Dependencies missing. Initializing automated installation...', colors.yellow);
-    const loader = getLoader('Installing packages...');
+    log('📦 Missing dependencies. Syncing...', colors.yellow);
+    const loader = getLoader('Syncing packages');
     await new Promise((resolve) => {
       exec('npm install --no-fund --no-audit --silent', (error) => {
         clearInterval(loader);
         if (error) {
-          log('⚠️  Dependency installation had issues. Manual check recommended.', colors.yellow);
+          log('⚠️  Sync issues detected.', colors.yellow);
         } else {
-          process.stdout.write('\r\x1b[32m✓\x1b[0m Dependencies synchronized               \n');
+          process.stdout.write('\r\x1b[32m•\x1b[0m Packages synchronized                 \n');
         }
         resolve();
       });
@@ -199,12 +191,12 @@ async function main() {
   }
 
   botProcess = startBot();
-  const botLoader = getLoader('Launching Core Client...');
+  const botLoader = getLoader('Starting Client');
 
   // Simple wait for bot status
   setTimeout(() => {
     clearInterval(botLoader);
-    process.stdout.write('\r\x1b[32m✓\x1b[0m Cybork Core operational               \n\n');
+    process.stdout.write('\r\x1b[32m•\x1b[0m Cybork Core online                     \n\n');
   }, 2000);
 }
 
