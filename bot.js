@@ -22,14 +22,14 @@ if (fs.existsSync(apiJsonPath)) {
 }
 
 // register extenders
-require("@helpers/extenders/Message");
-require("@helpers/extenders/Guild");
-require("@helpers/extenders/GuildChannel");
+require("./src/helpers/extenders/Message");
+require("./src/helpers/extenders/Guild");
+require("./src/helpers/extenders/GuildChannel");
 
-const { checkForUpdates } = require("@helpers/BotUtils");
-const { initializeMongoose } = require("@src/database/mongoose");
-const { BotClient } = require("@src/structures");
-const { validateConfiguration } = require("@helpers/Validator");
+const { checkForUpdates } = require("./src/helpers/BotUtils");
+const { initializeMongoose } = require("./src/database/mongoose");
+const { BotClient } = require("./src/structures");
+const { validateConfiguration } = require("./src/helpers/Validator");
 
 validateConfiguration();
 
