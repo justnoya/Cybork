@@ -1,6 +1,6 @@
 entrypoint = "bot.js"
 run = ["sh", "-c", "npm install && node bot.js"]
-modules = ["nodejs-18", "web", "bash"]
+modules = ["web", "bash", "python-3.11", "nodejs-20"]
 
 [nix]
 channel = "stable-25_05"

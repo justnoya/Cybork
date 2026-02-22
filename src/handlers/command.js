@@ -1,4 +1,4 @@
-const { EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
+const { EmbedBuilder, ApplicationCommandOptionType, PermissionFlagsBits } = require("discord.js");
 const { OWNER_IDS, PREFIX_COMMANDS, EMBED_COLORS } = require("@root/config");
 const { parsePermissions } = require("@helpers/Utils");
 const { timeformat } = require("@helpers/Utils");
@@ -33,7 +33,7 @@ module.exports = {
     data.prefix = prefix;
     data.invoke = invoke;
 
-    if (!message.channel.permissionsFor(message.guild.members.me).has("SendMessages")) return;
+    if (!message.channel.permissionsFor(message.guild.members.me).has(PermissionFlagsBits.SendMessages)) return;
 
     // callback validations
     if (cmd.validations) {

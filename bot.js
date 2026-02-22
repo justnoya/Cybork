@@ -35,9 +35,9 @@ validateConfiguration();
 
 // initialize client
 const client = new BotClient();
-client.loadCommands("src/commands");
-client.loadContexts("src/contexts");
-client.loadEvents("src/events");
+client.loadCommands(path.join(__dirname, "src/commands"));
+client.loadContexts(path.join(__dirname, "src/contexts"));
+client.loadEvents(path.join(__dirname, "src/events"));
 
 // find unhandled promise rejections
 process.on("unhandledRejection", (err) => client.logger.error(`Unhandled exception`, err));
