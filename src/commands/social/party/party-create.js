@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 
 module.exports = {
@@ -17,13 +17,13 @@ module.exports = {
       {
         name: "name",
         description: "Name for your listening party",
-        type: ApplicationCommandOptionType.String,
+        type: 3, // String
         required: false,
       },
       {
         name: "vote_percentage",
         description: "Percentage of votes needed to skip (default: 50%)",
-        type: ApplicationCommandOptionType.Integer,
+        type: 4, // Integer
         required: false,
         min_value: 10,
         max_value: 100,
@@ -31,7 +31,7 @@ module.exports = {
       {
         name: "max_members",
         description: "Maximum members allowed (0 = unlimited)",
-        type: ApplicationCommandOptionType.Integer,
+        type: 4, // Integer
         required: false,
         min_value: 0,
         max_value: 100,

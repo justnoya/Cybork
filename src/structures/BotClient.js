@@ -1,10 +1,9 @@
 const {
   Client,
   Collection,
-  GatewayIntentBits,
+  Intents,
   Partials,
   WebhookClient,
-  ApplicationCommandType,
 } = require("discord.js");
 const path = require("path");
 const { table } = require("table");
@@ -26,16 +25,15 @@ module.exports = class BotClient extends Client {
   constructor() {
     super({
       intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildInvites,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildPresences,
-        GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.GuildVoiceStates,
+        Intents.FLAGS.GUILDS,
+        Intents.FLAGS.GUILD_MESSAGES,
+        Intents.FLAGS.GUILD_INVITES,
+        Intents.FLAGS.GUILD_MEMBERS,
+        Intents.FLAGS.GUILD_PRESENCES,
+        Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+        Intents.FLAGS.GUILD_VOICE_STATES,
       ],
-      partials: [Partials.User, Partials.Message, Partials.Reaction],
+      partials: ["USER", "MESSAGE", "REACTION"],
       allowedMentions: {
         repliedUser: false,
       },
@@ -232,8 +230,8 @@ module.exports = class BotClient extends Client {
       }
     }
 
-    const userContexts = this.contextMenus.filter((ctx) => ctx.type === ApplicationCommandType.User).size;
-    const messageContexts = this.contextMenus.filter((ctx) => ctx.type === ApplicationCommandType.Message).size;
+    const userContexts = this.contextMenus.filter((ctx) => ctx.type === "USER").size;
+    const messageContexts = this.contextMenus.filter((ctx) => ctx.type === "MESSAGE").size;
 
     if (userContexts > 3) throw new Error("A maximum of 3 USER contexts can be enabled");
     if (messageContexts > 3) throw new Error("A maximum of 3 MESSAGE contexts can be enabled");
@@ -255,7 +253,7 @@ module.exports = class BotClient extends Client {
         .map((cmd) => ({
           name: cmd.name,
           description: cmd.description,
-          type: ApplicationCommandType.ChatInput,
+          type: "CHAT_INPUT",
           options: cmd.slashCommand.options,
         }))
         .forEach((s) => toRegister.push(s));

@@ -1,5 +1,4 @@
 const { musicValidations } = require("@helpers/BotUtils");
-const { ApplicationCommandOptionType } = require("discord.js");
 const emojiManager = require("@helpers/EmojiManager");
 
 /**
@@ -20,7 +19,7 @@ module.exports = {
       {
         name: "amount",
         description: "Enter a value to set [0 to 100]",
-        type: ApplicationCommandOptionType.Integer,
+        type: 4, // Integer
         required: false,
       },
     ],
