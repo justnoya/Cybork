@@ -23,9 +23,7 @@ function log(message, color = colors.reset) {
 const lavalinkPath = path.join(__dirname, 'Lavalink.jar');
 const hasLavalink = fs.existsSync(lavalinkPath);
 
-let lavalinkProcess = null;
 let botProcess = null;
-let lavalinkReady = false;
 let isShuttingDown = false;
 
 // Professional minimal loader
@@ -86,96 +84,6 @@ async function cleanOldLogs() {
   } catch (error) {
     // Silent fail
   }
-}
-
-async function checkLavalinkRunning() {
-  return new Promise((resolve) => {
-    exec('lsof -i:2010 || netstat -an | grep 2010', (error, stdout) => {
-      resolve(stdout && stdout.trim().length > 0);
-    });
-  });
-}
-
-async function startLavalink() {
-  if (!hasLavalink) {
-    log('⚠️  Audio Engine assets missing - playback capabilities will be restricted', colors.yellow);
-    return null;
-  }
-
-  const isRunning = await checkLavalinkRunning();
-  if (isRunning) {
-    log('ℹ️  Audio Engine already operational on port 2010', colors.cyan);
-    lavalinkReady = true;
-    return null;
-  }
-
-  log('🎵 Initializing high-performance Audio Engine...', colors.magenta);
-  
-  const lavalink = spawn('java', [
-    '-Djdk.tls.client.protocols=TLSv1.3,TLSv1.2',
-    '-Xmx512M',
-    '-jar',
-    'Lavalink.jar'
-  ], {
-    cwd: __dirname,
-    stdio: 'pipe'
-  });
-
-  const ignoredMessages = [
-    'Picked up JAVA_TOOL_OPTIONS',
-    'illegal reflection',
-    'Buffer pool was not set',
-    'Did not find udev library',
-    'Authentication failed from',
-    'You can safely ignore'
-  ];
-
-  lavalink.stdout.on('data', (data) => {
-    const message = data.toString().trim();
-    if (!message) return;
-    
-    const shouldIgnore = ignoredMessages.some(ignored => message.includes(ignored));
-    if (shouldIgnore) return;
-    
-    if (message.includes('Lavalink is ready to accept connections')) {
-      lavalinkReady = true;
-      log('✅ Audio Engine synchronized', colors.green);
-    } else if (message.includes('Started Launcher')) {
-      log('Audio Engine sequence initiated', colors.dim);
-    }
-  });
-
-  lavalink.stderr.on('data', (data) => {
-    const message = data.toString().trim();
-    const shouldIgnore = ignoredMessages.some(ignored => message.includes(ignored));
-    if (!shouldIgnore && message && !isShuttingDown) {
-      log(`Lavalink: ${message}`, colors.red);
-    }
-  });
-
-  lavalink.on('close', (code) => {
-    if (isShuttingDown) return;
-    
-    lavalinkReady = false;
-    log(`Lavalink exited with code ${code}`, colors.yellow);
-    
-    if (code !== 0 && code !== null) {
-      log('Restarting Lavalink in 10 seconds...', colors.yellow);
-      setTimeout(() => {
-        if (!isShuttingDown) {
-          lavalinkProcess = startLavalink();
-        }
-      }, 10000);
-    }
-  });
-
-  lavalink.on('error', (error) => {
-    if (!isShuttingDown) {
-      log(`Lavalink error: ${error.message}`, colors.red);
-    }
-  });
-
-  return lavalink;
 }
 
 function startBot() {
@@ -275,40 +183,19 @@ async function main() {
 
   // Check if node_modules exists
   if (!fs.existsSync(path.join(__dirname, 'node_modules'))) {
-    log('📦 Installing dependencies...', colors.yellow);
+    log('📦 Dependencies missing. Initializing automated installation...', colors.yellow);
+    const loader = getLoader('Installing packages...');
     await new Promise((resolve) => {
-      exec('npm install --silent', (error) => {
+      exec('npm install --no-fund --no-audit --silent', (error) => {
+        clearInterval(loader);
         if (error) {
-          log('⚠️  Dependency installation had issues', colors.yellow);
+          log('⚠️  Dependency installation had issues. Manual check recommended.', colors.yellow);
         } else {
-          log('✅ Dependencies installed', colors.green);
+          process.stdout.write('\r\x1b[32m✓\x1b[0m Dependencies synchronized               \n');
         }
         resolve();
       });
     });
-  }
-
-  if (hasLavalink) {
-    lavalinkProcess = await startLavalink();
-    
-    if (lavalinkProcess) {
-      const loader = getLoader('Initializing Audio Engine...');
-      
-      let waitTime = 0;
-      const maxWait = 20000;
-      
-      while (!lavalinkReady && waitTime < maxWait) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        waitTime += 1000;
-      }
-      
-      clearInterval(loader);
-      if (lavalinkReady) {
-        process.stdout.write('\r\x1b[32m✓\x1b[0m Audio Engine synchronized             \n');
-      } else {
-        process.stdout.write('\r\x1b[33m!\x1b[0m Audio Engine response delayed          \n');
-      }
-    }
   }
 
   botProcess = startBot();
@@ -330,10 +217,6 @@ function shutdown() {
   
   if (botProcess) {
     botProcess.kill();
-  }
-  
-  if (lavalinkProcess) {
-    lavalinkProcess.kill();
   }
   
   setTimeout(() => {
