@@ -6,12 +6,13 @@ This project is a comprehensive, multipurpose Discord bot built with Discord.js 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-## System Architecture
+## Project Architecture
+Refer to `rulebook.md` for detailed UI/UX design patterns, message component standards, and interaction routing architecture.
 
 ### Core Framework
 - **Discord.js v14**: Primary Discord API wrapper.
-- **Node.js**: Runtime environment (minimum v18.0.0).
-- **Module Alias System**: Path aliasing for cleaner imports (e.g., `@helpers`).
+- **Components V2**: Advanced message container system for modern UI.
+- **Interaction Router**: Centralized namespaced event handling.
 
 ### Command Architecture
 - **Dual Command System**: Supports both prefix and slash commands/context menus.
