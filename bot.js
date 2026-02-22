@@ -22,9 +22,9 @@ if (fs.existsSync(apiJsonPath)) {
 }
 
 // register extenders
-require("@src/helpers/extenders/Message");
-require("@src/helpers/extenders/Guild");
-require("@src/helpers/extenders/GuildChannel");
+require("@helpers/extenders/Message");
+require("@helpers/extenders/Guild");
+require("@helpers/extenders/GuildChannel");
 
 const { checkForUpdates } = require("@helpers/BotUtils");
 const { initializeMongoose } = require("@src/database/mongoose");
