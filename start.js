@@ -28,24 +28,30 @@ let botProcess = null;
 let lavalinkReady = false;
 let isShuttingDown = false;
 
+// Professional minimal loader
+function getLoader(text) {
+  const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  let i = 0;
+  return setInterval(() => {
+    process.stdout.write(`\r\x1b[36m${frames[i++ % frames.length]}\x1b[0m ${text}`);
+  }, 80);
+}
+
 // Auto-fix vulnerabilities on startup
 async function autoFixVulnerabilities() {
   return new Promise((resolve) => {
-    log('🔧 Running system optimization and security audit...', colors.cyan);
+    const loader = getLoader('Running system optimization audit...');
     
-    // Set a timeout for npm audit fix
     const timeout = setTimeout(() => {
-      log('Optimization check completed', colors.dim);
+      clearInterval(loader);
+      process.stdout.write('\r\x1b[32m✓\x1b[0m Optimization audit complete           \n');
       resolve();
-    }, 5000); // 5 second timeout
+    }, 3000);
     
     exec('npm audit fix --force > /dev/null 2>&1', (error) => {
       clearTimeout(timeout);
-      if (error) {
-        log('Optimization check completed', colors.dim);
-      } else {
-        log('✅ Security patches applied successfully', colors.green);
-      }
+      clearInterval(loader);
+      process.stdout.write('\r\x1b[32m✓\x1b[0m Security patches synchronized         \n');
       resolve();
     });
   });
@@ -249,10 +255,17 @@ function startBot() {
 
 async function main() {
   console.clear();
-  console.log('\n' + colors.bright + colors.cyan + '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' + colors.reset);
-  console.log(colors.bright + colors.cyan + '        Advanced Discord Audio & Management' + colors.reset);
-  console.log(colors.cyan + '             Enterprise-Grade Systems' + colors.reset);
-  console.log(colors.bright + colors.cyan + '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' + colors.reset + '\n');
+  console.log('\x1b[36m' + `
+    ___     _             _    
+   / __|  _| |__  ___ _ _| |__ 
+  | (_| || | '_ \\/ _ \\ '_| / / 
+   \\___\\_, |_.__/\\___/_| |_\\_\\ 
+       |__/                     
+  ` + '\x1b[0m');
+  console.log('\x1b[2m' + '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' + '\x1b[0m');
+  console.log('\x1b[1m\x1b[36m' + '        Cybork Advanced Management System' + '\x1b[0m');
+  console.log('\x1b[36m' + '             Enterprise-Grade Core' + '\x1b[0m');
+  console.log('\x1b[2m' + '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' + '\x1b[0m\n');
 
   // Auto-fix vulnerabilities
   await autoFixVulnerabilities();
@@ -279,31 +292,33 @@ async function main() {
     lavalinkProcess = await startLavalink();
     
     if (lavalinkProcess) {
-      log('⏳ Initializing Audio Engine...', colors.dim);
+      const loader = getLoader('Initializing Audio Engine...');
       
       let waitTime = 0;
-      const maxWait = 30000;
+      const maxWait = 20000;
       
       while (!lavalinkReady && waitTime < maxWait) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         waitTime += 1000;
       }
       
+      clearInterval(loader);
       if (lavalinkReady) {
-        log('✅ Audio Engine synchronization complete', colors.green);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        process.stdout.write('\r\x1b[32m✓\x1b[0m Audio Engine synchronized             \n');
       } else {
-        log('⚠️  Audio Engine response delayed, proceeding with core services...', colors.yellow);
+        process.stdout.write('\r\x1b[33m!\x1b[0m Audio Engine response delayed          \n');
       }
     }
   }
 
   botProcess = startBot();
+  const botLoader = getLoader('Launching Core Client...');
 
-  console.log('');
-  log('✅ System initialization successful', colors.green);
-  log('🚀 All services are now operational', colors.bright);
-  console.log('');
+  // Simple wait for bot status
+  setTimeout(() => {
+    clearInterval(botLoader);
+    process.stdout.write('\r\x1b[32m✓\x1b[0m Cybork Core operational               \n\n');
+  }, 2000);
 }
 
 function shutdown() {

@@ -10,13 +10,13 @@ module.exports = class Validator {
 
     // Bot Token
     if (!process.env.BOT_TOKEN) {
-      error("env: BOT_TOKEN cannot be empty");
+      console.log('\r\x1b[31m✕\x1b[0m Critical: BOT_TOKEN is missing');
       process.exit(1);
     }
 
     // Validate Database Config
     if (!process.env.MONGO_CONNECTION) {
-      error("env: MONGO_CONNECTION cannot be empty");
+      console.log('\r\x1b[31m✕\x1b[0m Critical: MONGO_CONNECTION is missing');
       process.exit(1);
     }
 
