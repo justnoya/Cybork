@@ -1,9 +1,15 @@
-require("dotenv").config();
-require("module-alias/register");
-
-// Load configuration from api.json if .env values are not set
 const fs = require("fs");
 const path = require("path");
+require("module-alias").addAliases({
+  "@root": __dirname,
+  "@handlers": path.join(__dirname, "src/handlers"),
+  "@helpers": path.join(__dirname, "src/helpers"),
+  "@schemas": path.join(__dirname, "src/database/schemas"),
+  "@src": path.join(__dirname, "src"),
+  "@structures": path.join(__dirname, "src/structures"),
+});
+
+require("dotenv").config();
 
 const apiJsonPath = path.join(__dirname, "api.json");
 if (fs.existsSync(apiJsonPath)) {
