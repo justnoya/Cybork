@@ -1,8 +1,9 @@
 const fs = require("fs");
 const path = require("path");
 
-// Register aliases before anything else
-require("module-alias").addAliases({
+require("module-alias/register");
+const moduleAlias = require("module-alias");
+moduleAlias.addAliases({
   "@root": __dirname,
   "@handlers": path.join(__dirname, "src/handlers"),
   "@helpers": path.join(__dirname, "src/helpers"),

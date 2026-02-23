@@ -5,24 +5,14 @@ const pino = require("pino");
 const webhookLogger = process.env.ERROR_LOGS ? new WebhookClient({ url: process.env.ERROR_LOGS }) : undefined;
 
 const today = new Date();
-const pinoLogger = pino.default(
+const pinoLogger = pino(
   {
     level: "debug",
   },
   pino.multistream([
     {
       level: "info",
-      stream: pino.transport({
-        target: "pino-pretty",
-        options: {
-          colorize: true,
-          translateTime: "yyyy-mm-dd HH:mm:ss",
-          ignore: "pid,hostname",
-          singleLine: false,
-          hideObject: true,
-          customColors: "info:blue,warn:yellow,error:red",
-        },
-      }),
+      stream: process.stdout
     },
     {
       level: "debug",
