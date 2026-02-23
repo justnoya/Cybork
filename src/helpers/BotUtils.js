@@ -1,5 +1,5 @@
-const { getJson } = require("@helpers/HttpUtils");
-const { success, warn, error } = require("@helpers/Logger");
+const { getJson } = require("./HttpUtils");
+const { success, warn, error } = require("./Logger");
 
 module.exports = class BotUtils {
   /**

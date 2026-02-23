@@ -1,9 +1,9 @@
 const { EmbedBuilder, ApplicationCommandOptionType, PermissionFlagsBits } = require("discord.js");
-const { OWNER_IDS, PREFIX_COMMANDS, EMBED_COLORS } = require("@root/config");
-const { parsePermissions } = require("@helpers/Utils");
-const { timeformat } = require("@helpers/Utils");
-const { getSettings } = require("@schemas/Guild");
-const { getBotConfig } = require("@schemas/BotConfig");
+const { OWNER_IDS, PREFIX_COMMANDS, EMBED_COLORS } = require("../../config");
+const { parsePermissions } = require("../helpers/Utils");
+const { timeformat } = require("../helpers/Utils");
+const { getSettings } = require("../database/schemas/Guild");
+const { getBotConfig } = require("../database/schemas/BotConfig");
 
 const cooldownCache = new Map();
 
