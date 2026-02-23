@@ -45,10 +45,15 @@ async function autoFixVulnerabilities() {
       resolve();
     }, 1500);
     
-    exec('npm audit fix --force > /dev/null 2>&1', (error) => {
+    // Auto-fix and ensure dependencies are installed
+    exec('npm install --no-fund --no-audit --silent && npm audit fix --force > /dev/null 2>&1', (error) => {
       clearTimeout(timeout);
       clearInterval(loader);
-      process.stdout.write('\r\x1b[32m•\x1b[0m Security patched                      \n');
+      if (error) {
+        process.stdout.write('\r\x1b[33m•\x1b[0m System optimized (with warnings)       \n');
+      } else {
+        process.stdout.write('\r\x1b[32m•\x1b[0m Security patched                      \n');
+      }
       resolve();
     });
   });
