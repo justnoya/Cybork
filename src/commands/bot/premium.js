@@ -23,7 +23,7 @@ module.exports = {
 
   async messageRun(message, args) {
     const response = getPremiumMessage();
-    await message.safeReply(response);
+    await message.channel.send(response);
   },
 
   async interactionRun(interaction) {

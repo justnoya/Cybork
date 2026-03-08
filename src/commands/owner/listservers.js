@@ -50,13 +50,12 @@ module.exports = {
     const total = servers.length;
     
     if (total === 0) {
-      return message.safeReply(
-        ContainerBuilder.warning(
-          "No Servers Found",
-          match ? `No servers found matching: **${match}**` : "The bot is not in any servers.",
-          0xFFA500
-        )
+      const response = ContainerBuilder.warning(
+        "No Servers Found",
+        match ? `No servers found matching: **${match}**` : "The bot is not in any servers.",
+        0xFFA500
       );
+      return message.channel.send(response);
     }
 
     const maxPerPage = MAX_PER_PAGE;

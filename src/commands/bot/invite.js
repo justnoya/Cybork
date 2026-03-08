@@ -1,6 +1,6 @@
 const { SUPPORT_SERVER, DASHBOARD } = require("@root/config");
-const ContainerBuilder = require("@helpers/ContainerBuilder");
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const ContainerBuilder = require("@helpers/ContainerBuilder");
 
 /**
  * @type {import("@structures/Command")}
@@ -22,7 +22,7 @@ module.exports = {
 
   async messageRun(message, args) {
     const response = getInviteMessage(message.client);
-    await message.safeReply(response);
+    await message.channel.send(response);
   },
 
   async interactionRun(interaction) {
@@ -33,7 +33,7 @@ module.exports = {
 
 function getInviteMessage(client) {
   const payload = ContainerBuilder.quickMessage(
-    `Invite ${client.user.username}`,
+    `📨 Invite ${client.user.username}`,
     "Click the buttons below to invite me to your server or join our community!",
     [],
     0xFFFFFF

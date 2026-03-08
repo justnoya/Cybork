@@ -190,7 +190,7 @@ async function getHelpMenu(context, prefix) {
       };
     });
 
-  const menuRow = ActionRowBuilder.from({
+  const menuRow = {
     type: 1,
     components: [{
       type: 3,
@@ -198,25 +198,27 @@ async function getHelpMenu(context, prefix) {
       placeholder: `${client?.user?.username || 'Bot'} Command Modules`,
       options: menuOptions
     }]
-  });
+  };
 
-  const linkButtons = ActionRowBuilder.from({
+  const linkButtonComponents = [
+    {
+      type: 2,
+      style: ButtonStyle.Link,
+      label: "Invite Bot",
+      url: client?.getInvite ? client.getInvite() : `https://discord.com/oauth2/authorize?client_id=${client?.user?.id}&permissions=8&scope=bot%20applications.commands`
+    },
+    SUPPORT_SERVER ? {
+      type: 2,
+      style: ButtonStyle.Link,
+      label: "Support Server",
+      url: SUPPORT_SERVER
+    } : null
+  ].filter(Boolean);
+
+  const linkButtons = {
     type: 1,
-    components: [
-      {
-        type: 2,
-        style: ButtonStyle.Link,
-        label: "Invite Bot",
-        url: client?.getInvite ? client.getInvite() : `https://discord.com/oauth2/authorize?client_id=${client?.user?.id}&permissions=8&scope=bot%20applications.commands`
-      },
-      SUPPORT_SERVER ? {
-        type: 2,
-        style: ButtonStyle.Link,
-        label: "Support Server",
-        url: SUPPORT_SERVER
-      } : null
-    ].filter(Boolean)
-  });
+    components: linkButtonComponents
+  };
 
   const payload = new ContainerBuilder()
     .addContainer({ 
@@ -476,7 +478,7 @@ function getCategoryEmbed(client, category, prefix, page = 0) {
 }
 
 function getBackButton() {
-  return ActionRowBuilder.from({
+  return {
     type: 1,
     components: [{
       type: 2,
@@ -484,7 +486,7 @@ function getBackButton() {
       label: "Back",
       style: ButtonStyle.Secondary
     }]
-  });
+  };
 }
 
 function getNavigationButtons(totalPages, currentPage) {
@@ -516,8 +518,8 @@ function getNavigationButtons(totalPages, currentPage) {
     disabled: currentPage >= totalPages - 1
   });
 
-  return ActionRowBuilder.from({
+  return {
     type: 1,
     components: components
-  });
+  };
 }
