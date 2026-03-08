@@ -17,7 +17,15 @@ const {
  */
 module.exports = async (client, message) => {
   if (!message.guild || message.author.bot) return;
-  const settings = await getSettings(message.guild);
+  
+  let settings;
+  try {
+    settings = await getSettings(message.guild);
+  } catch (error) {
+    client.logger.error("Failed to load guild settings", error);
+    // Don't process commands if we can't load settings
+    return;
+  }
 
   // AFK check
   try {
