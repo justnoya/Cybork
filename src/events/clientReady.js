@@ -1,4 +1,4 @@
-const { counterHandler, inviteHandler, presenceHandler, musicInteractionRouter } = require("@src/handlers");
+const { counterHandler, inviteHandler, presenceHandler } = require("@src/handlers");
 const { cacheReactionRoles } = require("@schemas/ReactionRoles");
 const { getSettings } = require("@schemas/Guild");
 
@@ -8,11 +8,11 @@ const { getSettings } = require("@schemas/Guild");
 module.exports = async (client) => {
   client.logger.success(`Logged in as ${client.user.tag}! (${client.user.id})`);
 
-  // Initialize Music Manager
-  if (client.config.MUSIC.ENABLED) {
-    client.initMusicManager();
-    client.logger.log("Music Manager initialized");
-  }
+  // Initialize Music Manager - DISABLED: Music feature removed
+  // if (client.config.MUSIC.ENABLED) {
+  //   client.initMusicManager();
+  //   client.logger.log("Music Manager initialized");
+  // }
 
   // Initialize Giveaways Manager
   if (client.config.GIVEAWAYS.ENABLED) {
@@ -39,11 +39,11 @@ module.exports = async (client) => {
     client.interactionRouter.initialize();
   }
 
-  // Initialize Music Interaction Router
-  if (client.config.MUSIC.ENABLED) {
-    musicInteractionRouter(client);
-    client.logger.log("Music Interaction Router initialized");
-  }
+  // Initialize Music Interaction Router - DISABLED: Music feature removed
+  // if (client.config.MUSIC.ENABLED) {
+  //   musicInteractionRouter(client);
+  //   client.logger.log("Music Interaction Router initialized");
+  // }
 
   for (const guild of client.guilds.cache.values()) {
     const settings = await getSettings(guild);

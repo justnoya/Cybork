@@ -30,6 +30,12 @@ module.exports = {
     image: "https://icons.iconarchive.com/icons/wwalczyszyn/iwindows/256/Music-Library-icon.png",
     emoji: "🎵",
   },
+  PARTY: {
+    name: "Party",
+    enabled: false,
+    image: "https://icons.iconarchive.com/icons/wwalczyszyn/iwindows/256/Music-Library-icon.png",
+    emoji: "🎉",
+  },
   MODERATION: {
     name: "Moderation",
     enabled: config.MODERATION.ENABLED,

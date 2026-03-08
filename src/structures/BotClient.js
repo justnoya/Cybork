@@ -73,7 +73,8 @@ module.exports = class BotClient extends Client {
     this.database = schemas;
 
     // Music Player (using Riffy + Lavalink - powerful, stable, supports all effects)
-    if (this.config.MUSIC.ENABLED) this.musicManager = riffyHandler(this);
+    // DISABLED: Music feature disabled in config
+    // if (this.config.MUSIC.ENABLED) this.musicManager = riffyHandler(this);
 
     // Giveaways
     if (this.config.GIVEAWAYS.ENABLED) this.giveawaysManager = giveawaysHandler(this);
@@ -84,14 +85,14 @@ module.exports = class BotClient extends Client {
     // Interaction Router
     this.interactionRouter = new InteractionRouter(this);
 
-    // Party Manager
-    this.partyManager = new PartyManager(this);
+    // Party Manager - DISABLED: Party feature disabled
+    // this.partyManager = new PartyManager(this);
 
-    // Party Music Handler
-    this.partyMusicHandler = new PartyMusicHandler(this);
+    // Party Music Handler - DISABLED: Party feature disabled
+    // this.partyMusicHandler = new PartyMusicHandler(this);
 
-    // Party Interaction Router
-    require("../handlers/partyInteractionRouter").init(this);
+    // Party Interaction Router - DISABLED: Party feature disabled
+    // require("../handlers/partyInteractionRouter").init(this);
     
     // Advanced Processor System (High-Performance for 200+ servers)
     this.processors = new ProcessorManager(this);
