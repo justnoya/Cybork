@@ -21,10 +21,14 @@ module.exports = async (client, message) => {
   let settings;
   try {
     settings = await getSettings(message.guild);
+    if (!settings) {
+      client.logger.warn(`No settings found for guild ${message.guild.id}, creating defaults`);
+      settings = { prefix: PREFIX_COMMANDS.DEFAULT_PREFIX, stats: { enabled: false }, invite: { tracking: false } };
+    }
   } catch (error) {
     client.logger.error("Failed to load guild settings", error);
-    // Don't process commands if we can't load settings
-    return;
+    // Use default settings as fallback
+    settings = { prefix: PREFIX_COMMANDS.DEFAULT_PREFIX, stats: { enabled: false }, invite: { tracking: false } };
   }
 
   // AFK check
