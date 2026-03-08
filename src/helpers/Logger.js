@@ -1,28 +1,27 @@
 const config = require("@root/config");
 const { EmbedBuilder, WebhookClient } = require("discord.js");
 const pino = require("pino");
+const fs = require("fs");
+const path = require("path");
 
 const webhookLogger = process.env.ERROR_LOGS ? new WebhookClient({ url: process.env.ERROR_LOGS }) : undefined;
 
 const today = new Date();
+const logsDir = path.join(process.cwd(), 'logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
+
 const pinoLogger = pino(
   {
     level: "debug",
-  },
-  pino.multistream([
-    {
-      level: "info",
-      stream: process.stdout
-    },
-    {
-      level: "debug",
-      stream: pino.destination({
-        dest: `${process.cwd()}/logs/combined-${today.getFullYear()}.${today.getMonth() + 1}.${today.getDate()}.log`,
-        sync: true,
-        mkdir: true,
-      }),
-    },
-  ])
+    transport: {
+      target: "pino/file",
+      options: {
+        destination: `${logsDir}/combined-${today.getFullYear()}.${today.getMonth() + 1}.${today.getDate()}.log`
+      }
+    }
+  }
 );
 
 function sendWebhook(content, err) {
