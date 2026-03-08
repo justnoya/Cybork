@@ -1,8 +1,7 @@
 const {
   Client,
   Collection,
-  GatewayIntentBits,
-  Partials,
+  Intents,
   WebhookClient,
 } = require("discord.js");
 const path = require("path");
@@ -25,16 +24,16 @@ module.exports = class BotClient extends Client {
   constructor() {
     super({
       intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.GuildInvites,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildPresences,
-        GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.MessageContent,
+        Intents.FLAGS.GUILDS,
+        Intents.FLAGS.GUILD_MESSAGES,
+        Intents.FLAGS.GUILD_INVITES,
+        Intents.FLAGS.GUILD_MEMBERS,
+        Intents.FLAGS.GUILD_PRESENCES,
+        Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+        Intents.FLAGS.GUILD_VOICE_STATES,
+        Intents.FLAGS.MESSAGE_CONTENT,
       ],
-      partials: [Partials.User, Partials.Message, Partials.Reaction],
+      partials: ["USER", "MESSAGE", "REACTION"],
       allowedMentions: {
         repliedUser: false,
       },
