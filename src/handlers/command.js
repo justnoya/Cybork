@@ -33,7 +33,8 @@ module.exports = {
     data.prefix = prefix;
     data.invoke = invoke;
 
-    if (!message.channel.permissionsFor(message.guild.members.me).has(PermissionFlagsBits.SendMessages)) return;
+    const botMember = message.guild.me || message.guild.members.me;
+    if (botMember && !message.channel.permissionsFor(botMember).has(PermissionFlagsBits.SendMessages)) return;
 
     // callback validations
     if (cmd.validations) {
@@ -46,11 +47,12 @@ module.exports = {
 
     // Owner commands - check both owners and global access users
     if (cmd.category === "OWNER") {
-      const botConfig = await getBotConfig();
-      const hasGlobalAccess = botConfig.access_users && botConfig.access_users.includes(message.author.id);
-      if (!OWNER_IDS.includes(message.author.id) && !hasGlobalAccess) {
-        return;
-      }
+      let hasGlobalAccess = false;
+      try {
+        const botConfig = await getBotConfig();
+        hasGlobalAccess = botConfig.access_users && botConfig.access_users.includes(message.author.id);
+      } catch (err) { /* DB not connected */ }
+      if (!OWNER_IDS.includes(message.author.id) && !hasGlobalAccess) return;
     }
 
     // check user permissions
@@ -62,7 +64,7 @@ module.exports = {
 
     // check bot permissions
     if (cmd.botPermissions && cmd.botPermissions.length > 0) {
-      if (!message.channel.permissionsFor(message.guild.members.me).has(cmd.botPermissions)) {
+      if (botMember && !message.channel.permissionsFor(botMember).has(cmd.botPermissions)) {
         return message.safeReply(`⚠️ I need ${parsePermissions(cmd.botPermissions)} for this command`);
       }
     }
@@ -112,11 +114,12 @@ module.exports = {
 
     // Owner commands - check both owners and global access users
     if (cmd.category === "OWNER") {
-      const botConfig = await getBotConfig();
-      const hasGlobalAccess = botConfig.access_users && botConfig.access_users.includes(interaction.user.id);
-      if (!OWNER_IDS.includes(interaction.user.id) && !hasGlobalAccess) {
-        return;
-      }
+      let hasGlobalAccess = false;
+      try {
+        const botConfig = await getBotConfig();
+        hasGlobalAccess = botConfig.access_users && botConfig.access_users.includes(interaction.user.id);
+      } catch (err) { /* DB not connected */ }
+      if (!OWNER_IDS.includes(interaction.user.id) && !hasGlobalAccess) return;
     }
 
     // user permissions
@@ -131,7 +134,8 @@ module.exports = {
 
     // bot permissions
     if (cmd.botPermissions && cmd.botPermissions.length > 0) {
-      if (!interaction.guild.members.me.permissions.has(cmd.botPermissions)) {
+      const interactionBotMember = interaction.guild.me || interaction.guild.members.me;
+      if (interactionBotMember && !interactionBotMember.permissions.has(cmd.botPermissions)) {
         return interaction.reply({
           content: `⚠️ I need ${parsePermissions(cmd.botPermissions)} for this command`,
           ephemeral: true,
