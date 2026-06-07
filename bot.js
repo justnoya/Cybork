@@ -6,6 +6,39 @@ if (typeof globalThis.File === "undefined") {
   globalThis.File = require("node:buffer").File;
 }
 
+// Discord.js v13 → v14 builder compatibility shim
+// Many source files use v14 names; patch them onto the v13 module so they work.
+(function patchDiscordJsV14Names() {
+  const djs = require("discord.js");
+  const patches = {
+    EmbedBuilder:              "MessageEmbed",
+    ActionRowBuilder:          "MessageActionRow",
+    ButtonBuilder:             "MessageButton",
+    SelectMenuBuilder:         "MessageSelectMenu",
+    StringSelectMenuBuilder:   "MessageSelectMenu",
+    ModalBuilder:              "Modal",
+    TextInputBuilder:          "TextInputComponent",
+    AttachmentBuilder:         "MessageAttachment",
+  };
+  for (const [v14, v13] of Object.entries(patches)) {
+    if (!djs[v14] && djs[v13]) djs[v14] = djs[v13];
+  }
+  // ButtonStyle in v13 lives on MessageButton, not a standalone export
+  if (!djs.ButtonStyle && djs.MessageButton) {
+    djs.ButtonStyle = {
+      Primary:   "PRIMARY",
+      Secondary: "SECONDARY",
+      Success:   "SUCCESS",
+      Danger:    "DANGER",
+      Link:      "LINK",
+    };
+  }
+  // TextInputStyle shim
+  if (!djs.TextInputStyle) {
+    djs.TextInputStyle = { Short: "SHORT", Paragraph: "PARAGRAPH" };
+  }
+})();
+
 require("module-alias/register");
 const moduleAlias = require("module-alias");
 moduleAlias.addAliases({

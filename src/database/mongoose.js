@@ -1,7 +1,34 @@
 const mongoose = require("mongoose");
+const path = require("path");
+const fs = require("fs");
 const { log, success, error, warn } = require("../helpers/Logger");
 
 mongoose.set("strictQuery", true);
+
+function getMongoUri() {
+  const raw = process.env.MONGO_CONNECTION || "";
+  const match = raw.match(/(mongodb(?:\+srv)?:\/\/[^\s]+)/);
+  if (match) return match[1];
+  return raw.trim();
+}
+
+function getTlsOptions() {
+  const caPath = path.join(__dirname, "../../rds-ca.pem");
+  if (fs.existsSync(caPath)) {
+    return {
+      tls: true,
+      tlsCAFile: caPath,
+      tlsAllowInvalidHostnames: true,
+      tlsAllowInvalidCertificates: true,
+    };
+  }
+  // Fallback: allow TLS without strict cert validation
+  return {
+    tls: true,
+    tlsAllowInvalidHostnames: true,
+    tlsAllowInvalidCertificates: true,
+  };
+}
 
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -18,11 +45,12 @@ async function attemptReconnect() {
   warn(`Database connection interrupted: Attempting recovery (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
 
   try {
-    await mongoose.connect(process.env.MONGO_CONNECTION, {
-      serverSelectionTimeoutMS: 5000,
+    await mongoose.connect(getMongoUri(), {
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
       maxPoolSize: 10,
       minPoolSize: 2,
+      ...getTlsOptions(),
     });
     success("Database recovery successful");
     reconnectAttempts = 0;
@@ -39,11 +67,12 @@ module.exports = {
     log(`Establishing connection to Database cluster...`);
 
     try {
-      await mongoose.connect(process.env.MONGO_CONNECTION, {
-        serverSelectionTimeoutMS: 5000,
+      await mongoose.connect(getMongoUri(), {
+        serverSelectionTimeoutMS: 10000,
         socketTimeoutMS: 45000,
         maxPoolSize: 10,
         minPoolSize: 2,
+        ...getTlsOptions(),
       });
 
       success("Database connection established");

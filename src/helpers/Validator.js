@@ -2,7 +2,8 @@ const CommandCategory = require("@structures/CommandCategory");
 const permissions = require("./permissions");
 const config = require("@root/config");
 const { log, warn, error } = require("./Logger");
-const { ApplicationCommandType } = require("discord.js");
+// ApplicationCommandType doesn't exist in discord.js v13 — define it manually
+const ApplicationCommandType = { ChatInput: 1, User: 2, Message: 3 };
 
 const ApplicationCommandOptionType = {
   Subcommand: 1,

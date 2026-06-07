@@ -1,4 +1,5 @@
-const { EmbedBuilder, ApplicationCommandType } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
+const ApplicationCommandType = { ChatInput: 1, User: 2, Message: 3 };
 const { EMBED_COLORS } = require("@root/config");
 
 /**
