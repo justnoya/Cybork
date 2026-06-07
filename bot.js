@@ -14,6 +14,24 @@ moduleAlias.addAliases({
 
 require("dotenv").config();
 
+// Polyfill discord.js v14 enums that commands use but don't exist in v13
+const _djs = require("discord.js");
+if (!_djs.ApplicationCommandOptionType) {
+  _djs.ApplicationCommandOptionType = {
+    Subcommand: 1, SubcommandGroup: 2, String: 3, Integer: 4,
+    Boolean: 5, User: 6, Channel: 7, Role: 8, Mentionable: 9,
+    Number: 10, Attachment: 11,
+  };
+}
+if (!_djs.ChannelType) {
+  _djs.ChannelType = {
+    GuildText: 0, DM: 1, GuildVoice: 2, GroupDM: 3,
+    GuildCategory: 4, GuildAnnouncement: 5, GuildNews: 5,
+    GuildNewsThread: 10, GuildPublicThread: 11, GuildPrivateThread: 12,
+    GuildStageVoice: 13, GuildDirectory: 14, GuildForum: 15,
+  };
+}
+
 const apiJsonPath = path.join(__dirname, "api.json");
 if (fs.existsSync(apiJsonPath)) {
   try {

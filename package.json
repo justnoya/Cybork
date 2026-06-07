@@ -73,6 +73,8 @@
     "pino": "^10.3.1",
     "play-dl": "^1.9.7",
     "pretty-ms": "^7.0.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "riffy": "^1.0.12",
     "snakecord": "^1.0.9",
     "sourcebin_js": "^0.0.3-ignore",
