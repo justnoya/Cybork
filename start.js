@@ -46,7 +46,7 @@ async function autoFixVulnerabilities() {
     }, 1500);
     
     // Auto-fix and ensure dependencies are installed
-    exec('npm install --no-fund --no-audit --silent && npm audit fix --force > /dev/null 2>&1', (error) => {
+    exec('npm install --no-fund --no-audit --silent', (error) => {
       clearTimeout(timeout);
       clearInterval(loader);
       if (error) {
