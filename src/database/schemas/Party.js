@@ -1,63 +1,69 @@
-const { Schema, model } = require("mongoose");
+const { pool, makeSaveable } = require("../pg");
 
-const PartySchema = new Schema(
-  {
-    partyId: { type: String, required: true, unique: true },
-    guildId: { type: String, required: true },
-    hostId: { type: String, required: true },
-    hostUsername: { type: String, required: true },
-    name: { type: String, default: "Listening Party" },
-    voiceChannelId: { type: String },
-    textChannelId: { type: String },
-    members: [
-      {
-        userId: String,
-        username: String,
-        joinedAt: { type: Date, default: Date.now },
-      },
-    ],
-    queue: [
-      {
-        title: String,
-        author: String,
-        uri: String,
-        duration: Number,
-        requestedBy: String,
-        addedAt: { type: Date, default: Date.now },
-      },
-    ],
-    settings: {
-      voteSkipPercentage: { type: Number, default: 50 },
-      allowGuestControl: { type: Boolean, default: false },
-      maxMembers: { type: Number, default: 0 },
-      autoplay: { type: Boolean, default: true },
-      announceJoins: { type: Boolean, default: true },
-    },
-    status: {
-      type: String,
-      enum: ["active", "paused", "ended"],
-      default: "active",
-    },
-    currentTrack: {
-      title: String,
-      author: String,
-      uri: String,
-      duration: Number,
-      startedAt: Date,
-    },
-    votes: {
-      skip: [String],
-      pause: [String],
-    },
-    createdAt: { type: Date, default: Date.now },
-    endedAt: Date,
+const TABLE = "parties";
+
+async function upsertParty(partyId, guildId, data) {
+  await pool.query(
+    `INSERT INTO "${TABLE}" (id, guild_id, data)
+     VALUES ($1, $2, $3::jsonb)
+     ON CONFLICT (id) DO UPDATE SET data = $3::jsonb, updated_at = NOW()`,
+    [partyId, guildId, JSON.stringify(data)]
+  );
+}
+
+const PartyModel = {
+  findOne: async (filter) => {
+    let res;
+    if (filter.partyId) {
+      res = await pool.query(`SELECT data FROM "${TABLE}" WHERE id = $1`, [filter.partyId]);
+    } else if (filter.guildId && filter.status) {
+      res = await pool.query(
+        `SELECT data FROM "${TABLE}" WHERE guild_id = $1 AND data->>'status' = $2 LIMIT 1`,
+        [filter.guildId, filter.status]
+      );
+    } else {
+      return null;
+    }
+    if (!res.rows.length) return null;
+    const doc = makeSaveable(TABLE, res.rows[0].data.partyId, res.rows[0].data);
+    return doc;
   },
-  {
-    timestamps: true,
-  }
-);
 
-PartySchema.index({ guildId: 1, status: 1 });
-PartySchema.index({ hostId: 1 });
+  find: async (filter = {}) => {
+    let res;
+    if (filter.guildId && filter.status) {
+      res = await pool.query(
+        `SELECT data FROM "${TABLE}" WHERE guild_id = $1 AND data->>'status' = $2`,
+        [filter.guildId, filter.status]
+      );
+    } else {
+      res = await pool.query(`SELECT data FROM "${TABLE}"`);
+    }
+    return res.rows.map((r) => {
+      const doc = makeSaveable(TABLE, r.data.partyId, r.data);
+      return doc;
+    });
+  },
 
-module.exports = model("Party", PartySchema);
+  create: async (data) => {
+    await upsertParty(data.partyId, data.guildId, data);
+    return makeSaveable(TABLE, data.partyId, data);
+  },
+
+  findOneAndUpdate: async (filter, update, options = {}) => {
+    const existing = await PartyModel.findOne(filter);
+    const base = existing ? JSON.parse(JSON.stringify(existing)) : {};
+    const setData = update.$set || update;
+    const merged = Object.assign({}, base, setData);
+    await upsertParty(merged.partyId || filter.partyId, merged.guildId, merged);
+    return options.new !== false ? makeSaveable(TABLE, merged.partyId, merged) : existing;
+  },
+
+  deleteOne: async (filter) => {
+    if (filter.partyId) {
+      await pool.query(`DELETE FROM "${TABLE}" WHERE id = $1`, [filter.partyId]);
+    }
+  },
+};
+
+module.exports = PartyModel;

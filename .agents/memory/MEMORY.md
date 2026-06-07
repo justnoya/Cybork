@@ -1,1 +1,2 @@
 - [djs-v13-compat-fixes](djs-v13-compat.md) — Critical v13/v14 compat bugs that silently break all command responses
+- [pg-migration](pg-migration.md) — Complete MongoDB→PostgreSQL migration: architecture, key files, and pitfalls

@@ -1,8 +1,7 @@
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 const { SUPPORT_SERVER, DASHBOARD, DEVELOPER, OWNER_IDS } = require("@root/config");
 const os = require("os");
-const mongoose = require("mongoose");
-const GuildModel = mongoose.model("guild");
+const { GuildModel } = require("@schemas/Guild");
 
 /**
  * @param {import('@structures/BotClient')} client

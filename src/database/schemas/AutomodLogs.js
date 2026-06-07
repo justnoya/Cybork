@@ -1,39 +1,21 @@
-const mongoose = require("mongoose");
+const { pool } = require("../pg");
 
-const reqString = {
-  type: String,
-  required: true,
-};
-
-const Schema = new mongoose.Schema(
-  {
-    guild_id: reqString,
-    member_id: reqString,
-    content: String,
-    reason: String,
-    strikes: Number,
-  },
-  {
-    versionKey: false,
-    autoIndex: false,
-    timestamps: {
-      createdAt: "created_at",
-      updatedAt: false,
-    },
-  }
-);
-
-const Model = mongoose.model("automod-logs", Schema);
+const TABLE = "automod_logs";
 
 module.exports = {
   addAutoModLogToDb: async (member, content, reason, strikes) => {
     if (!member) throw new Error("Member is undefined");
-    await new Model({
+    const data = {
       guild_id: member.guild.id,
       member_id: member.id,
       content,
       reason,
       strikes,
-    }).save();
+      created_at: new Date().toISOString(),
+    };
+    await pool.query(
+      `INSERT INTO "${TABLE}" (guild_id, member_id, data) VALUES ($1, $2, $3::jsonb)`,
+      [member.guild.id, member.id, JSON.stringify(data)]
+    );
   },
 };

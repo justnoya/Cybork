@@ -1,7 +1,6 @@
 
 const { EmbedBuilder, ApplicationCommandOptionType } = require("discord.js");
-const mongoose = require("mongoose");
-const GuildModel = mongoose.model("guild");
+const { GuildModel } = require("@schemas/Guild");
 
 /**
  * @type {import("@structures/Command")}

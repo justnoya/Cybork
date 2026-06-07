@@ -12,8 +12,7 @@ const {
 } = require("discord.js");
 const { getCommandUsage, getSlashUsage } = require("@handlers/command");
 const emojis = require("@root/emojis.json");
-const mongoose = require("mongoose");
-const GuildModel = mongoose.model("guild");
+const { GuildModel } = require("@schemas/Guild");
 
 const IDLE_TIMEOUT = 120;
 

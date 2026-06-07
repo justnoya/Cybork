@@ -1,64 +1,58 @@
-const mongoose = require("mongoose");
+const { pool } = require("../pg");
 
-const Schema = new mongoose.Schema(
-  {
-    messageId: String,
-    channelId: String,
-    guildId: String,
-    startAt: Number,
-    endAt: Number,
-    ended: Boolean,
-    winnerCount: Number,
-    prize: String,
-    messages: {
-      giveaway: String,
-      giveawayEnded: String,
-      inviteToParticipate: String,
-      drawing: String,
-      dropMessage: String,
-      winMessage: mongoose.Mixed,
-      embedFooter: mongoose.Mixed,
-      noWinner: String,
-      winners: String,
-      endedAt: String,
-      hostedBy: String,
-    },
-    thumbnail: String,
-    hostedBy: String,
-    winnerIds: { type: [String], default: undefined },
-    reaction: mongoose.Mixed,
-    botsCanWin: Boolean,
-    embedColor: mongoose.Mixed,
-    embedColorEnd: mongoose.Mixed,
-    exemptPermissions: { type: [], default: undefined },
-    exemptMembers: String,
-    bonusEntries: String,
-    extraData: mongoose.Mixed,
-    lastChance: {
-      enabled: Boolean,
-      content: String,
-      threshold: Number,
-      embedColor: mongoose.Mixed,
-    },
-    pauseOptions: {
-      isPaused: Boolean,
-      content: String,
-      unPauseAfter: Number,
-      embedColor: mongoose.Mixed,
-      durationAfterPause: Number,
-    },
-    isDrop: Boolean,
-    allowedMentions: {
-      parse: { type: [String], default: undefined },
-      users: { type: [String], default: undefined },
-      roles: { type: [String], default: undefined },
-    },
+const TABLE = "giveaways";
+
+const Model = {
+  find: () => ({
+    lean: () => ({
+      exec: async () => {
+        const res = await pool.query(`SELECT data FROM "${TABLE}" ORDER BY created_at ASC`);
+        return res.rows.map((r) => r.data);
+      },
+    }),
+  }),
+
+  create: async (giveawayData) => {
+    const id = giveawayData.messageId;
+    await pool.query(
+      `INSERT INTO "${TABLE}" (id, data) VALUES ($1, $2::jsonb) ON CONFLICT (id) DO NOTHING`,
+      [id, JSON.stringify(giveawayData)]
+    );
+    return giveawayData;
   },
-  {
-    id: false,
-    autoIndex: false,
-  }
-);
 
-const Model = mongoose.model("giveaways", Schema);
+  updateOne: (filter, update) => ({
+    exec: async () => {
+      const res = await pool.query(`SELECT data FROM "${TABLE}" WHERE id = $1`, [filter.messageId]);
+      if (!res.rows.length) return { modifiedCount: 0 };
+
+      const existing = res.rows[0].data;
+      const setData = update.$set || {};
+      const merged = Object.assign({}, existing, setData);
+
+      await pool.query(
+        `UPDATE "${TABLE}" SET data = $1::jsonb, updated_at = NOW() WHERE id = $2`,
+        [JSON.stringify(merged), filter.messageId]
+      );
+      return { modifiedCount: 1 };
+    },
+  }),
+
+  findOne: (filter) => ({
+    lean: () => ({
+      exec: async () => {
+        const res = await pool.query(`SELECT data FROM "${TABLE}" WHERE id = $1`, [filter.messageId]);
+        return res.rows.length ? res.rows[0].data : null;
+      },
+    }),
+  }),
+
+  deleteOne: (filter) => ({
+    exec: async () => {
+      await pool.query(`DELETE FROM "${TABLE}" WHERE id = $1`, [filter.messageId]);
+      return { deletedCount: 1 };
+    },
+  }),
+};
+
 module.exports = Model;

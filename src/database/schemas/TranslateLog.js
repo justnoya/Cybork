@@ -1,45 +1,26 @@
-const mongoose = require("mongoose");
+const { pool } = require("../pg");
 
-const reqString = {
-  type: String,
-  required: true,
-};
-
-const Schema = new mongoose.Schema(
-  {
-    guild_id: reqString,
-    channel_id: reqString,
-    message_id: reqString,
-    emoji: reqString,
-  },
-  {
-    versionKey: false,
-    autoIndex: false,
-    timestamps: {
-      createdAt: "created_at",
-      updatedAt: false,
-    },
-  }
-);
-
-const Model = mongoose.model("logs-translation", Schema);
+const TABLE = "translate_logs";
 
 module.exports = {
-  model: Model,
+  model: {},
 
-  isTranslated: async (message, code) =>
-    Model.findOne({
-      guild_id: message.guildId,
-      channel_id: message.channelId,
-      message_id: message.id,
-      emoji: code,
-    }).lean(),
+  isTranslated: async (message, code) => {
+    const res = await pool.query(
+      `SELECT 1 FROM "${TABLE}"
+       WHERE guild_id = $1 AND channel_id = $2 AND message_id = $3 AND emoji = $4
+       LIMIT 1`,
+      [message.guildId, message.channelId, message.id, code]
+    );
+    return res.rows.length > 0 ? true : null;
+  },
 
-  logTranslation: async (message, code) =>
-    new Model({
-      guild_id: message.guildId,
-      channel_id: message.channelId,
-      message_id: message.id,
-      emoji: code,
-    }).save(),
+  logTranslation: async (message, code) => {
+    await pool.query(
+      `INSERT INTO "${TABLE}" (guild_id, channel_id, message_id, emoji)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (guild_id, channel_id, message_id, emoji) DO NOTHING`,
+      [message.guildId, message.channelId, message.id, code]
+    );
+  },
 };

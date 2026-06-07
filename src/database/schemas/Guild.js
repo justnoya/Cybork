@@ -1,270 +1,157 @@
-const mongoose = require("mongoose");
-const { CACHE_SIZE, PREFIX_COMMANDS, STATS } = require("@root/config.js");
+const { pool, makeSaveable } = require("../pg");
+const { CACHE_SIZE, PREFIX_COMMANDS } = require("@root/config.js");
 const FixedSizeMap = require("fixedsize-map");
 const { getUser } = require("./User");
 
 const cache = new FixedSizeMap(CACHE_SIZE.GUILDS);
+const TABLE = "guilds";
 
-const Schema = new mongoose.Schema({
-  _id: String,
-  data: {
-    name: String,
-    region: String,
-    owner: { type: String, ref: "users" },
-    joinedAt: Date,
-    leftAt: Date,
-    bots: { type: Number, default: 0 },
-  },
-  prefix: { type: String, default: PREFIX_COMMANDS.DEFAULT_PREFIX },
-  stats: {
-    enabled: Boolean,
-    xp: {
-      message: { type: String, default: STATS.DEFAULT_LVL_UP_MSG },
-      channel: String,
+function defaultGuildData(guild) {
+  return {
+    _id: guild.id,
+    data: {
+      name: guild.name,
+      region: guild.preferredLocale,
+      owner: guild.ownerId,
+      joinedAt: guild.joinedAt,
     },
-  },
-  ticket: {
-    log_channel: String,
-    limit: { type: Number, default: 10 },
-    categories: [
-      {
-        _id: false,
-        name: String,
-        staff_roles: [String],
-      },
-    ],
-  },
-  automod: {
-    debug: Boolean,
-    strikes: { type: Number, default: 10 },
-    action: { type: String, default: "TIMEOUT" },
-    wh_channels: [String],
-    anti_attachments: Boolean,
-    anti_invites: Boolean,
-    anti_links: Boolean,
-    anti_spam: {
-      enabled: Boolean,
-      threshold: { type: Number, default: 5 },
-      timeframe: { type: Number, default: 5 },
+    prefix: PREFIX_COMMANDS.DEFAULT_PREFIX,
+    developers: [],
+    noprefix_users: [],
+    custom_aliases: [],
+    counters: [],
+    stats: { enabled: false },
+    invite: { tracking: false, ranks: [] },
+    autorole: { humans: [], bots: [] },
+    automod: {
+      strikes: 10,
+      action: "TIMEOUT",
+      wh_channels: [],
+      anti_spam: { enabled: false, threshold: 5, timeframe: 5 },
+      anti_badwords: { enabled: false, keywords: [], action: "DELETE" },
+      anti_zalgo: { enabled: false, threshold: 50 },
+      anti_caps: { enabled: false, threshold: 70, min_length: 10 },
     },
-    anti_ghostping: Boolean,
-    anti_massmention: Number,
-    max_lines: Number,
-    anti_badwords: {
-      enabled: Boolean,
-      keywords: [String],
-      action: { type: String, enum: ["DELETE", "WARN", "TIMEOUT", "KICK", "BAN"], default: "DELETE" },
+    welcome: { enabled: false, channels: [], auto_delete: { enabled: false, delay: 10 }, embed: {} },
+    farewell: { enabled: false, embed: {} },
+    logging: {
+      enabled: false,
+      channel_logs: { enabled: false, events: { create: true, delete: true, update: true } },
+      member_logs: { enabled: false, events: { join: true, leave: true, role_add: true, role_remove: true, nickname: true } },
+      message_logs: { enabled: false, events: { delete: true, bulk_delete: true, edit: true }, ignore_channels: [] },
+      mod_logs: { enabled: false, events: { ban: true, unban: true, kick: true, timeout: true, warn: true } },
+      role_logs: { enabled: false, events: { create: true, delete: true, update: true } },
     },
-    anti_zalgo: {
-      enabled: Boolean,
-      threshold: { type: Number, default: 50 },
+    ticket: { limit: 10, categories: [] },
+    suggestions: { enabled: false, staff_roles: [] },
+    antinuke: {
+      enabled: false,
+      whitelist: [],
+      punishment: "BAN",
+      anti_ban: { enabled: false, limit: 3, timeframe: 10 },
+      anti_kick: { enabled: false, limit: 3, timeframe: 10 },
+      anti_role_create: { enabled: false, limit: 3, timeframe: 10 },
+      anti_role_delete: { enabled: false, limit: 3, timeframe: 10 },
+      anti_channel_create: { enabled: false, limit: 3, timeframe: 10 },
+      anti_channel_delete: { enabled: false, limit: 3, timeframe: 10 },
+      anti_webhook: { enabled: false, limit: 3, timeframe: 10 },
+      anti_bot: { enabled: false, action: "KICK" },
+      anti_server_update: { enabled: false },
+      anti_emoji_delete: { enabled: false, limit: 3, timeframe: 10 },
+      anti_prune: { enabled: false },
     },
-    anti_caps: {
-      enabled: Boolean,
-      threshold: { type: Number, default: 70 },
-      min_length: { type: Number, default: 10 },
-    },
-  },
-  invite: {
-    tracking: Boolean,
-    ranks: [
-      {
-        invites: { type: Number, required: true },
-        _id: { type: String, required: true },
-      },
-    ],
-  },
-  flag_translation: {
-    enabled: Boolean,
-  },
-  modlog_channel: String,
-  max_warn: {
-    action: {
-      type: String,
-      enum: ["TIMEOUT", "KICK", "BAN"],
-      default: "KICK",
-    },
-    limit: { type: Number, default: 5 },
-  },
-  counters: [
-    {
-      _id: false,
-      counter_type: String,
-      name: String,
-      channel_id: String,
-    },
-  ],
-  welcome: {
-    enabled: Boolean,
-    channel: String,
-    channels: [String],
-    content: String,
-    auto_delete: {
-      enabled: Boolean,
-      delay: { type: Number, default: 10 },
-    },
-    embed: {
-      enabled: Boolean,
-      description: String,
-      color: String,
-      thumbnail: Boolean,
-      footer: String,
-      image: String,
-    },
-  },
-  farewell: {
-    enabled: Boolean,
-    channel: String,
-    content: String,
-    embed: {
-      description: String,
-      color: String,
-      thumbnail: Boolean,
-      footer: String,
-      image: String,
-    },
-  },
-  autorole: {
-    humans: [String],
-    bots: [String],
-  },
-  suggestions: {
-    enabled: Boolean,
-    channel_id: String,
-    approved_channel: String,
-    rejected_channel: String,
-    staff_roles: [String],
-  },
-  antinuke: {
-    enabled: Boolean,
-    log_channel: String,
-    whitelist: [String],
-    punishment: { type: String, enum: ["BAN", "KICK", "STRIP_ROLES"], default: "BAN" },
-    anti_ban: {
-      enabled: Boolean,
-      limit: { type: Number, default: 3 },
-      timeframe: { type: Number, default: 10 },
-    },
-    anti_kick: {
-      enabled: Boolean,
-      limit: { type: Number, default: 3 },
-      timeframe: { type: Number, default: 10 },
-    },
-    anti_role_create: {
-      enabled: Boolean,
-      limit: { type: Number, default: 3 },
-      timeframe: { type: Number, default: 10 },
-    },
-    anti_role_delete: {
-      enabled: Boolean,
-      limit: { type: Number, default: 3 },
-      timeframe: { type: Number, default: 10 },
-    },
-    anti_channel_create: {
-      enabled: Boolean,
-      limit: { type: Number, default: 3 },
-      timeframe: { type: Number, default: 10 },
-    },
-    anti_channel_delete: {
-      enabled: Boolean,
-      limit: { type: Number, default: 3 },
-      timeframe: { type: Number, default: 10 },
-    },
-    anti_webhook: {
-      enabled: Boolean,
-      limit: { type: Number, default: 3 },
-      timeframe: { type: Number, default: 10 },
-    },
-    anti_bot: {
-      enabled: Boolean,
-      action: { type: String, enum: ["KICK", "BAN"], default: "KICK" },
-    },
-    anti_server_update: {
-      enabled: Boolean,
-    },
-    anti_emoji_delete: {
-      enabled: Boolean,
-      limit: { type: Number, default: 3 },
-      timeframe: { type: Number, default: 10 },
-    },
-    anti_prune: {
-      enabled: Boolean,
-    },
-  },
-  // Logging System
-  logging: {
-    enabled: Boolean,
-    channel_logs: {
-      enabled: Boolean,
-      channel: String,
-      events: {
-        create: { type: Boolean, default: true },
-        delete: { type: Boolean, default: true },
-        update: { type: Boolean, default: true },
-      },
-    },
-    member_logs: {
-      enabled: Boolean,
-      channel: String,
-      events: {
-        join: { type: Boolean, default: true },
-        leave: { type: Boolean, default: true },
-        role_add: { type: Boolean, default: true },
-        role_remove: { type: Boolean, default: true },
-        nickname: { type: Boolean, default: true },
-      },
-    },
-    message_logs: {
-      enabled: Boolean,
-      channel: String,
-      events: {
-        delete: { type: Boolean, default: true },
-        bulk_delete: { type: Boolean, default: true },
-        edit: { type: Boolean, default: true },
-      },
-      ignore_channels: [String],
-    },
-    mod_logs: {
-      enabled: Boolean,
-      channel: String,
-      events: {
-        ban: { type: Boolean, default: true },
-        unban: { type: Boolean, default: true },
-        kick: { type: Boolean, default: true },
-        timeout: { type: Boolean, default: true },
-        warn: { type: Boolean, default: true },
-      },
-    },
-    role_logs: {
-      enabled: Boolean,
-      channel: String,
-      events: {
-        create: { type: Boolean, default: true },
-        delete: { type: Boolean, default: true },
-        update: { type: Boolean, default: true },
-      },
-    },
-  },
-  // Custom command aliases per guild
-  custom_aliases: [{
-    _id: false,
-    alias: String, // The custom alias
-    command: String, // The original command name
-    created_by: String, // User ID who created it
-    created_at: { type: Date, default: Date.now },
-  }],
-  // Global bot settings (stored with _id: "GLOBAL_SETTINGS")
-  developers: [String],
-  noprefix_users: [String], // Users who can use commands without prefix
-  giveaway_reaction: String, // Custom reaction emoji for giveaways
-});
+    max_warn: { action: "KICK", limit: 5 },
+  };
+}
 
-const Model = mongoose.model("guild", Schema);
+function applyMigrations(guildData) {
+  let needsSave = false;
+
+  if (guildData.autorole && typeof guildData.autorole === "string") {
+    guildData.autorole = { humans: [guildData.autorole], bots: [] };
+    needsSave = true;
+  } else if (!guildData.autorole) {
+    guildData.autorole = { humans: [], bots: [] };
+  }
+
+  if (guildData.automod) {
+    if (typeof guildData.automod.anti_spam === "boolean") {
+      const wasEnabled = guildData.automod.anti_spam;
+      guildData.automod.anti_spam = { enabled: wasEnabled, threshold: 5, timeframe: 5 };
+      needsSave = true;
+    } else if (!guildData.automod.anti_spam) {
+      guildData.automod.anti_spam = { enabled: false, threshold: 5, timeframe: 5 };
+    }
+    if (!guildData.automod.anti_badwords) {
+      guildData.automod.anti_badwords = { enabled: false, keywords: [], action: "DELETE" };
+    }
+    if (!guildData.automod.anti_zalgo) {
+      guildData.automod.anti_zalgo = { enabled: false, threshold: 50 };
+    }
+    if (!guildData.automod.anti_caps) {
+      guildData.automod.anti_caps = { enabled: false, threshold: 70, min_length: 10 };
+    }
+  }
+
+  if (guildData.welcome && !guildData.welcome.auto_delete) {
+    guildData.welcome.auto_delete = { enabled: false, delay: 10 };
+  }
+
+  if (!guildData.logging) {
+    guildData.logging = {
+      enabled: false,
+      channel_logs: { enabled: false },
+      member_logs: { enabled: false },
+      message_logs: { enabled: false },
+      mod_logs: { enabled: false },
+      role_logs: { enabled: false },
+    };
+    needsSave = true;
+  }
+
+  if (guildData.developers && guildData.developers.length > 0) {
+    if (!guildData.noprefix_users) guildData.noprefix_users = [];
+    for (const userId of guildData.developers) {
+      if (!guildData.noprefix_users.includes(userId)) {
+        guildData.noprefix_users.push(userId);
+        needsSave = true;
+      }
+    }
+  }
+
+  return needsSave;
+}
+
+class GuildModel {
+  constructor(data) {
+    Object.assign(this, data);
+    const id = this._id;
+    const self = this;
+    Object.defineProperty(this, "save", {
+      enumerable: false,
+      configurable: true,
+      value: async () => {
+        const snapshot = JSON.parse(JSON.stringify(self));
+        await pool.query(
+          `INSERT INTO "${TABLE}" (id, data, updated_at)
+           VALUES ($1, $2::jsonb, NOW())
+           ON CONFLICT (id) DO UPDATE SET data = $2::jsonb, updated_at = NOW()`,
+          [id, JSON.stringify(snapshot)]
+        );
+      },
+    });
+  }
+
+  static async findOne(filter) {
+    if (!filter?._id) return null;
+    const res = await pool.query(`SELECT data FROM "${TABLE}" WHERE id = $1`, [filter._id]);
+    if (!res.rows.length) return null;
+    return new GuildModel(res.rows[0].data);
+  }
+}
 
 module.exports = {
-  /**
-   * @param {import('discord.js').Guild} guild
-   */
+  GuildModel,
   getSettings: async (guild) => {
     if (!guild) throw new Error("Guild is undefined");
     if (!guild.id) throw new Error("Guild Id is undefined");
@@ -272,127 +159,32 @@ module.exports = {
     const cached = cache.get(guild.id);
     if (cached) return cached;
 
-    let guildData = await Model.findById(guild.id);
-    if (!guildData) {
-      // save owner details
+    const res = await pool.query(`SELECT data FROM "${TABLE}" WHERE id = $1`, [guild.id]);
+
+    let guildData;
+    if (!res.rows.length) {
       guild
         .fetchOwner()
         .then(async (owner) => {
-          const userDb = await getUser(owner);
+          const userDb = await getUser(owner.user);
           await userDb.save();
         })
-        .catch((ex) => {});
+        .catch(() => {});
 
-      // create a new guild model
-      guildData = new Model({
-        _id: guild.id,
-        data: {
-          name: guild.name,
-          region: guild.preferredLocale,
-          owner: guild.ownerId,
-          joinedAt: guild.joinedAt,
-        },
-        developers: [], // Initialize developers as an empty array
-      });
-
-      await guildData.save();
+      guildData = defaultGuildData(guild);
+      await pool.query(
+        `INSERT INTO "${TABLE}" (id, data) VALUES ($1, $2::jsonb) ON CONFLICT (id) DO NOTHING`,
+        [guild.id, JSON.stringify(guildData)]
+      );
+    } else {
+      guildData = res.rows[0].data;
     }
 
-    // MIGRATION: Handle legacy data formats for backwards compatibility
-    let needsSave = false;
+    const needsSave = applyMigrations(guildData);
+    const doc = makeSaveable(TABLE, guild.id, guildData);
+    if (needsSave) await doc.save();
 
-    // Migrate autorole from String to Object
-    if (guildData.autorole && typeof guildData.autorole === 'string') {
-      guildData.autorole = {
-        humans: [guildData.autorole],
-        bots: []
-      };
-      needsSave = true;
-    } else if (!guildData.autorole) {
-      guildData.autorole = { humans: [], bots: [] };
-    }
-
-    // Migrate automod.anti_spam from Boolean to Object
-    if (guildData.automod) {
-      if (typeof guildData.automod.anti_spam === 'boolean') {
-        const wasEnabled = guildData.automod.anti_spam;
-        guildData.automod.anti_spam = {
-          enabled: wasEnabled,
-          threshold: 5,
-          timeframe: 5
-        };
-        needsSave = true;
-      } else if (!guildData.automod.anti_spam) {
-        guildData.automod.anti_spam = {
-          enabled: false,
-          threshold: 5,
-          timeframe: 5
-        };
-      }
-
-      // Initialize new automod fields if missing
-      if (!guildData.automod.anti_badwords) {
-        guildData.automod.anti_badwords = {
-          enabled: false,
-          keywords: [],
-          action: "DELETE"
-        };
-      }
-      if (!guildData.automod.anti_zalgo) {
-        guildData.automod.anti_zalgo = {
-          enabled: false,
-          threshold: 50
-        };
-      }
-      if (!guildData.automod.anti_caps) {
-        guildData.automod.anti_caps = {
-          enabled: false,
-          threshold: 70,
-          min_length: 10
-        };
-      }
-    }
-
-    // Initialize welcome.auto_delete if missing
-    if (guildData.welcome && !guildData.welcome.auto_delete) {
-      guildData.welcome.auto_delete = {
-        enabled: false,
-        delay: 10
-      };
-    }
-
-    // Initialize logging if missing
-    if (!guildData.logging) {
-      guildData.logging = {
-        enabled: false,
-        channel_logs: { enabled: false },
-        member_logs: { enabled: false },
-        message_logs: { enabled: false },
-        mod_logs: { enabled: false },
-        role_logs: { enabled: false }
-      };
-    }
-
-    // Migrate legacy noprefix users from developers to noprefix_users
-    if (guildData.developers && guildData.developers.length > 0) {
-      if (!guildData.noprefix_users) {
-        guildData.noprefix_users = [];
-      }
-      
-      for (const userId of guildData.developers) {
-        if (!guildData.noprefix_users.includes(userId)) {
-          guildData.noprefix_users.push(userId);
-          needsSave = true;
-        }
-      }
-    }
-
-    // Save migrations if needed
-    if (needsSave) {
-      await guildData.save();
-    }
-
-    cache.add(guild.id, guildData);
-    return guildData;
+    cache.add(guild.id, doc);
+    return doc;
   },
 };

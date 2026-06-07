@@ -1,46 +1,11 @@
-const mongoose = require("mongoose");
+const { pool, makeSaveable } = require("../pg");
 const { CACHE_SIZE } = require("@root/config.js");
 const FixedSizeMap = require("fixedsize-map");
 
 const cache = new FixedSizeMap(CACHE_SIZE.USERS);
-
-const Schema = new mongoose.Schema(
-  {
-    _id: String,
-    username: String,
-    discriminator: String,
-    logged: Boolean,
-    coins: { type: Number, default: 0 },
-    bank: { type: Number, default: 0 },
-    reputation: {
-      received: { type: Number, default: 0 },
-      given: { type: Number, default: 0 },
-      timestamp: Date,
-    },
-    daily: {
-      streak: { type: Number, default: 0 },
-      timestamp: Date,
-    },
-    profile: {
-      bio: { type: String, default: null, maxlength: 200 },
-      banner: { type: String, default: "gradient_blue" },
-      bannerColor: { type: String, default: null },
-    },
-  },
-  {
-    timestamps: {
-      createdAt: "created_at",
-      updatedAt: "updated_at",
-    },
-  }
-);
-
-const Model = mongoose.model("user", Schema);
+const TABLE = "users";
 
 module.exports = {
-  /**
-   * @param {import('discord.js').User} user
-   */
   getUser: async (user) => {
     if (!user) throw new Error("User is required.");
     if (!user.id) throw new Error("User Id is required.");
@@ -48,49 +13,55 @@ module.exports = {
     const cached = cache.get(user.id);
     if (cached) return cached;
 
-    let userDb = await Model.findById(user.id);
-    if (!userDb) {
-      userDb = new Model({
+    const res = await pool.query(`SELECT data FROM "${TABLE}" WHERE id = $1`, [user.id]);
+
+    let userData;
+    if (!res.rows.length) {
+      userData = {
         _id: user.id,
         username: user.username,
         discriminator: user.discriminator,
-      });
+        logged: false,
+        coins: 0,
+        bank: 0,
+        reputation: { received: 0, given: 0, timestamp: null },
+        daily: { streak: 0, timestamp: null },
+        profile: { bio: null, banner: "gradient_blue", bannerColor: null },
+      };
+      await pool.query(
+        `INSERT INTO "${TABLE}" (id, data) VALUES ($1, $2::jsonb) ON CONFLICT (id) DO NOTHING`,
+        [user.id, JSON.stringify(userData)]
+      );
+    } else {
+      userData = res.rows[0].data;
+      if (!userData.username || !userData.discriminator) {
+        userData.username = user.username;
+        userData.discriminator = user.discriminator;
+      }
     }
 
-    // Temporary fix for users who where added to DB before v5.0.0
-    // Update username and discriminator in previous DB
-    else if (!userDb.username || !userDb.discriminator) {
-      userDb.username = user.username;
-      userDb.discriminator = user.discriminator;
-    }
-
-    cache.add(user.id, userDb);
-    return userDb;
+    const doc = makeSaveable(TABLE, user.id, userData);
+    cache.add(user.id, doc);
+    return doc;
   },
 
-  /**
-   * Update cache after saving user data
-   * @param {string} userId
-   * @param {object} userDb
-   */
   updateCache: (userId, userDb) => {
     cache.add(userId, userDb);
   },
 
-  /**
-   * Clear cache for a user
-   * @param {string} userId
-   */
   clearCache: (userId) => {
-    if (cache.contains(userId)) {
-      cache.remove(userId);
-    }
+    if (cache.contains(userId)) cache.remove(userId);
   },
 
   getReputationLb: async (limit = 10) => {
-    return Model.find({ "reputation.received": { $gt: 0 } })
-      .sort({ "reputation.received": -1, "reputation.given": 1 })
-      .limit(limit)
-      .lean();
+    const res = await pool.query(
+      `SELECT data FROM "${TABLE}"
+       WHERE (data->'reputation'->>'received')::numeric > 0
+       ORDER BY (data->'reputation'->>'received')::numeric DESC,
+                (data->'reputation'->>'given')::numeric ASC
+       LIMIT $1`,
+      [limit]
+    );
+    return res.rows.map((r) => r.data);
   },
 };
