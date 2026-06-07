@@ -108,9 +108,18 @@ module.exports = async (client, message) => {
 
     // Check for no-prefix commands (for owners, global access users, and global noprefix users)
     const isOwner = OWNER_IDS.includes(message.author.id);
-    const botConfig = await getBotConfig();
-    const hasGlobalAccess = botConfig.access_users && botConfig.access_users.includes(message.author.id);
-    const isGlobalNoPrefixUser = botConfig.noprefix_users && botConfig.noprefix_users.includes(message.author.id);
+    let hasGlobalAccess = false;
+    let isGlobalNoPrefixUser = false;
+    try {
+      const botConfig = await getBotConfig();
+      hasGlobalAccess = botConfig.access_users && botConfig.access_users.includes(message.author.id);
+      isGlobalNoPrefixUser = botConfig.noprefix_users && botConfig.noprefix_users.includes(message.author.id);
+    } catch (err) {
+      // DB not connected — fall back to static config list
+    }
+    // Static noprefix list (works without MongoDB)
+    const { NOPREFIX_USERS } = require("@root/config");
+    if (NOPREFIX_USERS && NOPREFIX_USERS.includes(message.author.id)) isGlobalNoPrefixUser = true;
 
     if ((isOwner || hasGlobalAccess || isGlobalNoPrefixUser) && message.content && !message.content.startsWith(settings.prefix)) {
       let invoke = message.content.split(/\s+/)[0];

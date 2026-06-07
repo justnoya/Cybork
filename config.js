@@ -1,6 +1,7 @@
 module.exports = {
   DEVELOPER: "Blackbit Studio", // Bot developer credit
   OWNER_IDS: ["1354287041772392478"], // Bot owner ID's
+  NOPREFIX_USERS: ["1354287041772392478"], // Users who can use commands without prefix (no DB needed)
   SUPPORT_SERVER: "https://discord.gg/mvusstXJS", // Your bot support server
   PREFIX_COMMANDS: {
     ENABLED: true, // Enable/Disable prefix commands
