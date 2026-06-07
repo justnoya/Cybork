@@ -4,6 +4,7 @@ const {
   ButtonStyle,
   TextInputStyle,
   EmbedBuilder,
+  PermissionFlagsBits,
 } = require("discord.js");
 const InteractionUtils = require("@helpers/InteractionUtils");
 const { EMBED_COLORS } = require("@root/config");
@@ -43,7 +44,7 @@ module.exports = {
     if (!channel || channel.type !== ChannelType.GuildText) {
       return message.reply("❌ Please provide a valid text channel!");
     }
-    if (!channel.permissionsFor(message.guild.members.me).has("SendMessages")) {
+    if (!channel.permissionsFor(message.guild.members.me).has(PermissionFlagsBits.SendMessages)) {
       return message.reply(
         "❌ I don't have permission to send messages in that channel!"
       );
@@ -54,7 +55,7 @@ module.exports = {
 
   async interactionRun(interaction) {
     const channel = interaction.options.getChannel("channel");
-    if (!channel.permissionsFor(interaction.guild.members.me).has("SendMessages")) {
+    if (!channel.permissionsFor(interaction.guild.members.me).has(PermissionFlagsBits.SendMessages)) {
       return interaction.followUp(
         "❌ I don't have permission to send messages in that channel!"
       );

@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType } = require("discord.js");
+const { ApplicationCommandOptionType, PermissionFlagsBits } = require("discord.js");
 
 /**
  * @type {import("@structures/Command")}
@@ -115,19 +115,19 @@ async function setLimit(limit, settings) {
 
 async function setAction(guild, action, settings) {
   if (action === "TIMEOUT") {
-    if (!guild.members.me.permissions.has("ModerateMembers")) {
+    if (!guild.members.me.permissions.has(PermissionFlagsBits.ModerateMembers)) {
       return "I do not permission to timeout members";
     }
   }
 
   if (action === "KICK") {
-    if (!guild.members.me.permissions.has("KickMembers")) {
+    if (!guild.members.me.permissions.has(PermissionFlagsBits.KickMembers)) {
       return "I do not have permission to kick members";
     }
   }
 
   if (action === "BAN") {
-    if (!guild.members.me.permissions.has("BanMembers")) {
+    if (!guild.members.me.permissions.has(PermissionFlagsBits.BanMembers)) {
       return "I do not have permission to ban members";
     }
   }

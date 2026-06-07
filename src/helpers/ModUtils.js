@@ -1,4 +1,4 @@
-const { Collection, EmbedBuilder, GuildMember } = require("discord.js");
+const { Collection, EmbedBuilder, GuildMember, PermissionFlagsBits } = require("discord.js");
 const { MODERATION } = require("@root/config");
 
 // Utils
@@ -167,11 +167,11 @@ module.exports = class ModUtils {
    * @param {any} argument
    */
   static async purgeMessages(issuer, channel, type, amount, argument) {
-    if (!channel.permissionsFor(issuer).has(["ManageMessages", "ReadMessageHistory"])) {
+    if (!channel.permissionsFor(issuer).has([PermissionFlagsBits.ManageMessages, PermissionFlagsBits.ReadMessageHistory])) {
       return "MEMBER_PERM";
     }
 
-    if (!channel.permissionsFor(issuer.guild.members.me).has(["ManageMessages", "ReadMessageHistory"])) {
+    if (!channel.permissionsFor(issuer.guild.members.me).has([PermissionFlagsBits.ManageMessages, PermissionFlagsBits.ReadMessageHistory])) {
       return "BOT_PERM";
     }
 
@@ -543,7 +543,7 @@ module.exports = class ModUtils {
     if (!target.voice?.channel) return "NO_VOICE";
     if (target.voice.channelId === channel.id) return "ALREADY_IN_CHANNEL";
 
-    if (!channel.permissionsFor(target).has(["ViewChannel", "Connect"])) return "TARGET_PERM";
+    if (!channel.permissionsFor(target).has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect])) return "TARGET_PERM";
 
     try {
       await target.voice.setChannel(channel, reason);

@@ -1,5 +1,5 @@
 const { cacheGuildInvites, resetInviteCache } = require("@handlers/invite");
-const { ApplicationCommandOptionType, ChannelType } = require("discord.js");
+const { ApplicationCommandOptionType, ChannelType, PermissionFlagsBits } = require("discord.js");
 
 /**
  * @type {import("@structures/Command")}
@@ -55,12 +55,12 @@ async function setStatus({ guild }, input, settings) {
   const status = input.toUpperCase() === "ON" ? true : false;
 
   if (status) {
-    if (!guild.members.me.permissions.has(["ManageGuild", "ManageChannels"])) {
+    if (!guild.members.me.permissions.has([PermissionFlagsBits.ManageGuild, PermissionFlagsBits.ManageChannels])) {
       return "Oops! I am missing `Manage Server`, `Manage Channels` permission!\nI cannot track invites";
     }
 
     const channelMissing = guild.channels.cache
-      .filter((ch) => ch.type === ChannelType.GuildText && !ch.permissionsFor(guild.members.me).has("ManageChannels"))
+      .filter((ch) => ch.type === ChannelType.GuildText && !ch.permissionsFor(guild.members.me).has(PermissionFlagsBits.ManageChannels))
       .map((ch) => ch.name);
 
     if (channelMissing.length > 1) {

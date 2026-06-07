@@ -192,7 +192,7 @@ async function processGiveawaySetup(interaction) {
   }
 
   // Check permissions
-  const perms = ["ViewChannel", "SendMessages", "EmbedLinks"];
+  const perms = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks];
   if (!giveawayChannel.permissionsFor(interaction.guild.members.me).has(perms)) {
     return interaction.followUp({
       embeds: [

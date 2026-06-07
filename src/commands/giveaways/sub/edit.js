@@ -9,7 +9,8 @@ module.exports = async (member, messageId, addDuration, newPrize, newWinnerCount
   if (!messageId) return "You must provide a valid message id.";
 
   // Permissions
-  if (!member.permissions.has("ManageMessages")) {
+  const { PermissionFlagsBits } = require("discord.js");
+  if (!member.permissions.has(PermissionFlagsBits.ManageMessages)) {
     return "You need to have the manage messages permissions to start giveaways.";
   }
 

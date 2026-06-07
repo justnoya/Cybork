@@ -28,6 +28,11 @@ All Mongoose schemas replaced with native `pg` queries backed by JSONB columns. 
 ## GuildModel class (Guild.js)
 Commands that used `mongoose.model("guild")` directly (for GLOBAL_SETTINGS doc) were updated to import `{ GuildModel }` from Guild.js. `GuildModel` is a class with a static `findOne()` and constructor that adds `.save()`. GLOBAL_SETTINGS is stored in `guilds` table with `id = 'GLOBAL_SETTINGS'`.
 
+## Permission string compatibility (CRITICAL)
+Discord.js v13 uses SCREAMING_SNAKE_CASE flags (`ADD_REACTIONS`, `SEND_MESSAGES`) internally. Code written for v14 uses camelCase (`AddReactions`, `SendMessages`) which throws `Invalid bitfield flag`. The `bot.js` shim patches `PermissionFlagsBits` to have the correct BigInt values under camelCase keys.
+
+**Fix applied**: `src/handlers/command.js` has a `resolvePerms()` helper that converts camelCase strings to BigInt values via the shim before calling `.has()`. All inline `.has("CamelCase")` and `deny/allow: ["CamelCase"]` calls across all command/handler/helper files were converted to `PermissionFlagsBits.CamelCase`. Never pass raw camelCase strings to `permissions.has()` or `permissionOverwrites` arrays.
+
 ## makeSaveable pattern
 ```js
 const doc = makeSaveable("tableName", primaryKeyValue, plainObject);

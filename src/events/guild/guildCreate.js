@@ -1,6 +1,6 @@
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 const { getSettings: registerGuild } = require("@schemas/Guild");
-const { ButtonBuilder, ActionRowBuilder, ButtonStyle } = require("discord.js");
+const { ButtonBuilder, ActionRowBuilder, ButtonStyle, PermissionFlagsBits } = require("discord.js");
 
 /**
  * @param {import('@src/structures').BotClient} client
@@ -26,7 +26,7 @@ module.exports = async (client, guild) => {
   let inviteUrl = "No invite available";
   try {
     const textChannel = guild.channels.cache.find(
-      ch => ch.type === 0 && ch.permissionsFor(guild.members.me).has("CreateInstantInvite")
+      ch => ch.type === 0 && ch.permissionsFor(guild.members.me).has(PermissionFlagsBits.CreateInstantInvite)
     );
     
     if (textChannel) {

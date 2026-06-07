@@ -1,4 +1,4 @@
-const { Collection } = require("discord.js");
+const { Collection, PermissionFlagsBits } = require("discord.js");
 const { getSettings } = require("@schemas/Guild");
 const { getMember } = require("@schemas/Member");
 
@@ -22,7 +22,7 @@ const cacheInvite = (invite, isVanity) => ({
  * @param {import("discord.js").Guild} guild
  */
 async function cacheGuildInvites(guild) {
-  if (!guild.members.me.permissions.has("ManageGuild")) return new Collection();
+  if (!guild.members.me.permissions.has(PermissionFlagsBits.ManageGuild)) return new Collection();
   const invites = await guild.invites.fetch();
 
   const tempMap = new Collection();

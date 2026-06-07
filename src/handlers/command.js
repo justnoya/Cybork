@@ -2,6 +2,13 @@ const { EmbedBuilder, ApplicationCommandOptionType, PermissionFlagsBits } = requ
 const { OWNER_IDS, PREFIX_COMMANDS, EMBED_COLORS } = require("../../config");
 const { parsePermissions } = require("../helpers/Utils");
 const { timeformat } = require("../helpers/Utils");
+
+// Resolve camelCase permission strings (v14 style) to BigInt values via the
+// PermissionFlagsBits shim patched in bot.js, so v13's has() accepts them.
+function resolvePerms(perms) {
+  if (!perms || !perms.length) return perms;
+  return perms.map((p) => (typeof p === "string" && PermissionFlagsBits[p] !== undefined ? PermissionFlagsBits[p] : p));
+}
 const { getSettings } = require("../database/schemas/Guild");
 const { getBotConfig } = require("../database/schemas/BotConfig");
 
@@ -34,7 +41,7 @@ module.exports = {
     data.invoke = invoke;
 
     const botMember = message.guild.me || message.guild.members.me;
-    if (botMember && !message.channel.permissionsFor(botMember).has(PermissionFlagsBits.SendMessages)) return;
+    if (botMember && !message.channel.permissionsFor(botMember).has(resolvePerms([PermissionFlagsBits.SendMessages]))) return;
 
     // callback validations
     if (cmd.validations) {
@@ -57,14 +64,14 @@ module.exports = {
 
     // check user permissions
     if (cmd.userPermissions && cmd.userPermissions?.length > 0) {
-      if (!message.channel.permissionsFor(message.member).has(cmd.userPermissions)) {
+      if (!message.channel.permissionsFor(message.member).has(resolvePerms(cmd.userPermissions))) {
         return message.safeReply(`❌ You need ${parsePermissions(cmd.userPermissions)} for this command`);
       }
     }
 
     // check bot permissions
     if (cmd.botPermissions && cmd.botPermissions.length > 0) {
-      if (botMember && !message.channel.permissionsFor(botMember).has(cmd.botPermissions)) {
+      if (botMember && !message.channel.permissionsFor(botMember).has(resolvePerms(cmd.botPermissions))) {
         return message.safeReply(`⚠️ I need ${parsePermissions(cmd.botPermissions)} for this command`);
       }
     }
@@ -124,7 +131,7 @@ module.exports = {
 
     // user permissions
     if (interaction.member && cmd.userPermissions?.length > 0) {
-      if (!interaction.member.permissions.has(cmd.userPermissions)) {
+      if (!interaction.member.permissions.has(resolvePerms(cmd.userPermissions))) {
         return interaction.reply({
           content: `❌ You need ${parsePermissions(cmd.userPermissions)} for this command`,
           ephemeral: true,
@@ -135,7 +142,7 @@ module.exports = {
     // bot permissions
     if (cmd.botPermissions && cmd.botPermissions.length > 0) {
       const interactionBotMember = interaction.guild.me || interaction.guild.members.me;
-      if (interactionBotMember && !interactionBotMember.permissions.has(cmd.botPermissions)) {
+      if (interactionBotMember && !interactionBotMember.permissions.has(resolvePerms(cmd.botPermissions))) {
         return interaction.reply({
           content: `⚠️ I need ${parsePermissions(cmd.botPermissions)} for this command`,
           ephemeral: true,

@@ -6,6 +6,7 @@ const {
   ChannelType,
   StringSelectMenuBuilder,
   ComponentType,
+  PermissionFlagsBits,
 } = require("discord.js");
 const { TICKET } = require("@root/config.js");
 
@@ -16,8 +17,8 @@ const { getSettings } = require("@schemas/Guild");
 const { postToBin } = require("@helpers/HttpUtils");
 const { error } = require("@helpers/Logger");
 
-const OPEN_PERMS = ["ManageChannels"];
-const CLOSE_PERMS = ["ManageChannels", "ReadMessageHistory"];
+const OPEN_PERMS = [PermissionFlagsBits.ManageChannels];
+const CLOSE_PERMS = [PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ReadMessageHistory];
 
 /**
  * @param {import('discord.js').Channel} channel
@@ -210,15 +211,15 @@ async function handleTicketOpen(interaction) {
     const permissionOverwrites = [
       {
         id: guild.roles.everyone,
-        deny: ["ViewChannel"],
+        deny: [PermissionFlagsBits.ViewChannel],
       },
       {
         id: user.id,
-        allow: ["ViewChannel", "SendMessages", "ReadMessageHistory"],
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
       },
       {
         id: guild.members.me.roles.highest.id,
-        allow: ["ViewChannel", "SendMessages", "ReadMessageHistory"],
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
       },
     ];
 
@@ -228,7 +229,7 @@ async function handleTicketOpen(interaction) {
         if (!role) return;
         permissionOverwrites.push({
           id: role,
-          allow: ["ViewChannel", "SendMessages", "ReadMessageHistory"],
+          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
         });
       });
     }

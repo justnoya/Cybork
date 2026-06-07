@@ -1,4 +1,4 @@
-const { GuildChannel, ChannelType } = require("discord.js");
+const { GuildChannel, ChannelType, PermissionFlagsBits } = require("discord.js");
 
 // v13 returns string types; v14 returns numbers — handle both
 function isTextableChannel(type) {
@@ -20,7 +20,7 @@ function isVoiceChannel(type) {
 GuildChannel.prototype.canSendEmbeds = function () {
   const botMember = this.guild.me || this.guild.members?.me;
   if (!botMember) return false;
-  return this.permissionsFor(botMember).has(["ViewChannel", "SendMessages", "EmbedLinks"]);
+  return this.permissionsFor(botMember).has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks]);
 };
 
 /**

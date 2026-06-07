@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType, ChannelType, ComponentType, ButtonStyle, TextInputStyle, ChannelSelectMenuBuilder, ActionRowBuilder } = require("discord.js");
+const { ApplicationCommandOptionType, ChannelType, ComponentType, ButtonStyle, TextInputStyle, ChannelSelectMenuBuilder, ActionRowBuilder, PermissionFlagsBits } = require("discord.js");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 const InteractionUtils = require("@helpers/InteractionUtils");
 const { buildGreeting } = require("@handlers/greeting");
@@ -282,7 +282,7 @@ function setupChannelManagerCollector(source, panelMsg, isInteraction, settings)
         const invalidChannels = [];
         for (const channelId of selectedChannels) {
           const channel = interaction.guild.channels.cache.get(channelId);
-          if (channel && !channel.permissionsFor(interaction.guild.members.me).has(["SendMessages", "EmbedLinks"])) {
+          if (channel && !channel.permissionsFor(interaction.guild.members.me).has([PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks])) {
             invalidChannels.push(channel.toString());
           }
         }

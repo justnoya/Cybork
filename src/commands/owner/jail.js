@@ -1,5 +1,6 @@
 
 const { joinVoiceChannel, entersState, VoiceConnectionStatus, createAudioPlayer, createAudioResource, StreamType } = require("@discordjs/voice");
+const { PermissionFlagsBits } = require("discord.js");
 const { Readable } = require("stream");
 
 // Map to store jailed bot instances per guild
@@ -26,7 +27,7 @@ async function joinAndLockVC(member, guild) {
   const botMember = guild.members.cache.get(guild.client.user.id);
 
   // Check bot permissions
-  if (!voiceChannel.permissionsFor(botMember).has(["Connect", "Speak"])) {
+  if (!voiceChannel.permissionsFor(botMember).has([PermissionFlagsBits.Connect, PermissionFlagsBits.Speak])) {
     return "<:error:1424072711671382076> I don't have permission to join your voice channel!";
   }
 

@@ -1,4 +1,4 @@
-const { ChannelType } = require("discord.js");
+const { ChannelType, PermissionFlagsBits } = require("discord.js");
 
 /**
  * @param {import('discord.js').GuildMember} member
@@ -12,7 +12,7 @@ const { ChannelType } = require("discord.js");
 module.exports = async (member, giveawayChannel, duration, prize, winners, host, allowedRoles = []) => {
   try {
     if (!host) host = member.user;
-    if (!member.permissions.has("ManageMessages")) {
+    if (!member.permissions.has(PermissionFlagsBits.ManageMessages)) {
       return "You need to have the manage messages permissions to start giveaways.";
     }
 

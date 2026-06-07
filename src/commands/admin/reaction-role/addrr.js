@@ -1,8 +1,8 @@
 const { addReactionRole, getReactionRoles } = require("@schemas/ReactionRoles");
-const { parseEmoji, ApplicationCommandOptionType, ChannelType } = require("discord.js");
+const { parseEmoji, ApplicationCommandOptionType, ChannelType, PermissionFlagsBits } = require("discord.js");
 const { parsePermissions } = require("@helpers/Utils");
 
-const channelPerms = ["EmbedLinks", "ReadMessageHistory", "AddReactions", "UseExternalEmojis", "ManageMessages"];
+const channelPerms = [PermissionFlagsBits.EmbedLinks, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AddReactions, PermissionFlagsBits.UseExternalEmojis, PermissionFlagsBits.ManageMessages];
 
 /**
  * @type {import("@structures/Command")}

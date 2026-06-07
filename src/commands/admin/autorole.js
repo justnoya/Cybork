@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType, ComponentType, ButtonStyle, TextInputStyle, RoleSelectMenuBuilder, ActionRowBuilder } = require("discord.js");
+const { ApplicationCommandOptionType, ComponentType, ButtonStyle, TextInputStyle, RoleSelectMenuBuilder, ActionRowBuilder, PermissionFlagsBits } = require("discord.js");
 const ContainerBuilder = require("@helpers/ContainerBuilder");
 const InteractionUtils = require("@helpers/InteractionUtils");
 const emojis = require("@root/emojis.json");
@@ -486,7 +486,7 @@ function validateRole(guild, role) {
     return { error: "You cannot set @everyone as an autorole" };
   }
 
-  if (!guild.members.me.permissions.has("ManageRoles")) {
+  if (!guild.members.me.permissions.has(PermissionFlagsBits.ManageRoles)) {
     return { error: "I don't have the ManageRoles permission" };
   }
 

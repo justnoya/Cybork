@@ -1,4 +1,4 @@
-const { ApplicationCommandOptionType, ChannelType } = require("discord.js");
+const { ApplicationCommandOptionType, ChannelType, PermissionFlagsBits } = require("discord.js");
 
 /**
  * @type {import("@structures/Command")}
@@ -90,11 +90,11 @@ async function setupCounter(guild, type, name, settings) {
     permissionOverwrites: [
       {
         id: guild.roles.everyone,
-        deny: ["Connect"],
+        deny: [PermissionFlagsBits.Connect],
       },
       {
         id: guild.members.me.id,
-        allow: ["ViewChannel", "ManageChannels", "Connect"],
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.Connect],
       },
     ],
   });

@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require("discord.js");
+const { EmbedBuilder, PermissionFlagsBits } = require("discord.js");
 const { containsLink, containsDiscordInvite } = require("@helpers/Utils");
 const { getMember } = require("@schemas/Member");
 const { addModAction } = require("@helpers/ModUtils");
@@ -28,13 +28,13 @@ const shouldModerate = (message) => {
   const { member, guild, channel } = message;
 
   // Ignore if bot cannot delete channel messages
-  if (!channel.permissionsFor(guild.members.me)?.has("ManageMessages")) return false;
+  if (!channel.permissionsFor(guild.members.me)?.has(PermissionFlagsBits.ManageMessages)) return false;
 
   // Ignore Possible Guild Moderators
-  if (member.permissions.has(["KickMembers", "BanMembers", "ManageGuild"])) return false;
+  if (member.permissions.has([PermissionFlagsBits.KickMembers, PermissionFlagsBits.BanMembers, PermissionFlagsBits.ManageGuild])) return false;
 
   // Ignore Possible Channel Moderators
-  if (channel.permissionsFor(message.member).has("ManageMessages")) return false;
+  if (channel.permissionsFor(message.member).has(PermissionFlagsBits.ManageMessages)) return false;
   return true;
 };
 

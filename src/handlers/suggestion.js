@@ -10,6 +10,7 @@ const {
   EmbedBuilder,
   ButtonStyle,
   TextInputStyle,
+  PermissionFlagsBits,
 } = require("discord.js");
 const { stripIndents } = require("common-tags");
 
@@ -44,7 +45,7 @@ const getVotesMessage = (upVotes, downVotes) => {
 
 const hasPerms = (member, settings) => {
   return (
-    member.permissions.has("ManageGuild") ||
+    member.permissions.has(PermissionFlagsBits.ManageGuild) ||
     member.roles.cache.find((r) => settings.suggestions.staff_roles.includes(r.id))
   );
 };

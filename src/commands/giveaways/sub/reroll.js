@@ -6,7 +6,7 @@ module.exports = async (member, messageId) => {
   if (!messageId) return "You must provide a valid message id.";
 
   // Permissions
-  if (!member.permissions.has("ManageMessages")) {
+  if (!member.permissions.has(require("discord.js").PermissionFlagsBits.ManageMessages)) {
     return "You need to have the manage messages permissions to start giveaways.";
   }
 

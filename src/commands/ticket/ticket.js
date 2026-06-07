@@ -9,6 +9,7 @@ const {
   ButtonStyle,
   TextInputStyle,
   ComponentType,
+  PermissionFlagsBits,
 } = require("discord.js");
 const { EMBED_COLORS } = require("@root/config.js");
 const { isTicketChannel, closeTicket, closeAllTickets } = require("@handlers/ticket");
@@ -145,7 +146,7 @@ module.exports = {
 
     // Setup
     if (input === "setup") {
-      if (!message.guild.members.me.permissions.has("ManageChannels")) {
+      if (!message.guild.members.me.permissions.has(PermissionFlagsBits.ManageChannels)) {
         return message.safeReply("I am missing `Manage Channels` to create ticket channels");
       }
       const targetChannel = message.guild.findMatchingChannels(args[1])[0];
@@ -220,7 +221,7 @@ module.exports = {
     if (sub === "setup") {
       const channel = interaction.options.getChannel("channel");
 
-      if (!interaction.guild.members.me.permissions.has("ManageChannels")) {
+      if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageChannels)) {
         return interaction.followUp("I am missing `Manage Channels` to create ticket channels");
       }
 

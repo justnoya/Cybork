@@ -5,7 +5,7 @@ const { EMBED_COLORS } = require("@root/config");
  */
 module.exports = async (member) => {
   // Permissions
-  if (!member.permissions.has("ManageMessages")) {
+  if (!member.permissions.has(require("discord.js").PermissionFlagsBits.ManageMessages)) {
     return "You need to have the manage messages permissions to manage giveaways.";
   }
 

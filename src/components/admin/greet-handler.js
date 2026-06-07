@@ -1,6 +1,6 @@
 const ModernEmbed = require("@helpers/ModernEmbed");
 const EmojiManager = require("@helpers/EmojiManager");
-const { ChannelType, StringSelectMenuBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { ChannelType, StringSelectMenuBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require("discord.js");
 
 module.exports = async function handleGreetInteraction(interaction) {
   if (!interaction.customId?.startsWith("greet")) return;
@@ -97,7 +97,7 @@ async function showChannelManager(interaction) {
   const channels = welcome.channels || [];
 
   const textChannels = interaction.guild.channels.cache
-    .filter(ch => ch.type === ChannelType.GuildText && ch.permissionsFor(interaction.guild.members.me).has(["ViewChannel", "SendMessages"]))
+    .filter(ch => ch.type === ChannelType.GuildText && ch.permissionsFor(interaction.guild.members.me).has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages]))
     .first(25);
 
   if (textChannels.length === 0) {

@@ -8,6 +8,7 @@ const {
   ModalBuilder,
   ButtonStyle,
   ApplicationCommandOptionType,
+  PermissionFlagsBits,
 } = require("discord.js");
 const { parsePermissions } = require("@helpers/Utils");
 const ems = require("enhanced-ms");
@@ -292,7 +293,7 @@ module.exports = {
  * @param {import('discord.js').GuildTextBasedChannel} targetCh
  */
 async function runModalSetup({ member, channel, guild }, targetCh) {
-  const SETUP_PERMS = ["ViewChannel", "SendMessages", "EmbedLinks"];
+  const SETUP_PERMS = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks];
 
   // validate channel perms
   if (!targetCh) return channel.safeSend("Giveaway setup has been cancelled. You did not mention a channel");
