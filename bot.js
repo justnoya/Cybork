@@ -121,6 +121,7 @@ validateConfiguration();
 // initialize client
 const client = new BotClient();
 client.loadCommands("src/commands");
+process.stdout.write(`CYBORK:COMMANDS:${client.commands.length}:${client.slashCommands.size}\n`);
 client.loadContexts("src/contexts");
 client.loadEvents("src/events");
 

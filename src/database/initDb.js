@@ -108,7 +108,7 @@ async function initializeDatabase() {
       );
       CREATE INDEX IF NOT EXISTS idx_parties_guild ON parties(guild_id);
     `);
-    console.log("✅ PostgreSQL tables initialised");
+    process.stdout.write("CYBORK:DATABASE:PostgreSQL\n");
   } finally {
     client.release();
   }

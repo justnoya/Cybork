@@ -7,6 +7,7 @@ const { getSettings } = require("@schemas/Guild");
  */
 module.exports = async (client) => {
   client.logger.success(`Logged in as ${client.user.tag}! (${client.user.id})`);
+  process.stdout.write(`CYBORK:ONLINE:${client.user.tag}\n`);
 
   // Initialize Music Manager - DISABLED: Music feature removed
   // if (client.config.MUSIC.ENABLED) {

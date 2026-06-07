@@ -109,18 +109,8 @@ module.exports = class BotClient extends Client {
       }
     });
 
-    console.log(
-      table(clientEvents, {
-        header: {
-          alignment: "center",
-          content: "Client Events",
-        },
-        singleLine: true,
-        columns: [{ width: 25 }, { width: 5, alignment: "center" }],
-      })
-    );
-
     this.logger.log(`Loaded ${success + failed} events. Success (${success}) Failed (${failed})`);
+    process.stdout.write(`CYBORK:EVENTS:${success}\n`);
   }
 
   /**
