@@ -30,8 +30,7 @@ module.exports = class Validator {
 
     // Validate Database Config
     if (!process.env.MONGO_CONNECTION) {
-      console.log('\r\x1b[31m✕\x1b[0m Critical: MONGO_CONNECTION is missing');
-      process.exit(1);
+      warn("env: MONGO_CONNECTION is missing. Database features (economy, moderation logs, tickets, etc.) won't work");
     }
 
     // Validate Dashboard Config
