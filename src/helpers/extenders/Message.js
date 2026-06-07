@@ -6,20 +6,31 @@ const { Message } = require("discord.js");
  */
 Message.prototype.safeReply = async function (content, seconds) {
   if (!content) return;
-  const perms = ["ViewChannel", "SendMessages"];
-  if (content.embeds && content.embeds.length > 0) perms.push("EmbedLinks");
-  if (this.channel.type !== "DM" && !this.channel.permissionsFor(this.guild.members.me).has(perms)) return;
 
-  perms.push("ReadMessageHistory");
-  if (this.channel.type !== "DM" && !this.channel.permissionsFor(this.guild.members.me).has(perms)) {
-    return this.channel.safeSend(content, seconds);
+  // v13: guild.me | v14: guild.members.me
+  const botMember = this.guild ? (this.guild.me || this.guild.members?.me) : null;
+  const isDM = this.channel.type === "DM" || this.channel.type === 1;
+
+  if (!isDM && botMember) {
+    const perms = ["ViewChannel", "SendMessages"];
+    if (content.embeds && content.embeds.length > 0) perms.push("EmbedLinks");
+    if (!this.channel.permissionsFor(botMember).has(perms)) return;
+
+    const readPerms = [...perms, "ReadMessageHistory"];
+    if (!this.channel.permissionsFor(botMember).has(readPerms)) {
+      return this.channel.safeSend(content, seconds);
+    }
   }
 
   try {
     if (!seconds) return await this.reply(content);
     const reply = await this.reply(content);
-    setTimeout(() => reply.deletable && reply.delete().catch((ex) => {}), seconds * 1000);
+    setTimeout(() => reply.deletable && reply.delete().catch(() => {}), seconds * 1000);
   } catch (ex) {
-    this.client.logger.error(`safeReply`, ex);
+    try {
+      return await this.channel.send(content);
+    } catch (ex2) {
+      this.client.logger.error(`safeReply`, ex2);
+    }
   }
 };

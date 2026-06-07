@@ -1,0 +1,1 @@
+- [djs-v13-compat-fixes](djs-v13-compat.md) — Critical v13/v14 compat bugs that silently break all command responses
