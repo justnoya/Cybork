@@ -1,4 +1,4 @@
-const guildInfo = require("../shared/guild");
+const guildInfo = require("./shared/guild");
 
 /**
  * @type {import("@structures/Command")}
@@ -13,8 +13,11 @@ module.exports = {
     enabled: true,
     aliases: ["serverinfo", "si", "server", "ginfo"],
   },
+  slashCommand: {
+    enabled: false,
+  },
 
-  async messageRun(message, args) {
+  async messageRun(message) {
     const response = await guildInfo(message.guild);
     await message.safeReply(response);
   },

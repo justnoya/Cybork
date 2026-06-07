@@ -11,13 +11,10 @@ const { recursiveReadDirSync } = require("../helpers/Utils");
 const { validateCommand, validateContext } = require("../helpers/Validator");
 const { schemas } = require("../database/mongoose");
 const CommandCategory = require("./CommandCategory");
-const riffyHandler = require("../handlers/riffy");
 const giveawaysHandler = require("../handlers/giveaway");
 const { DiscordTogether } = require("discord-together");
 const EmojiManager = require("../helpers/EmojiManager");
 const InteractionRouter = require("../handlers/interactionRouter");
-const PartyManager = require("../handlers/partyManager");
-const PartyMusicHandler = require("../handlers/partyMusicHandler");
 const { ProcessorManager } = require("../processors");
 
 module.exports = class BotClient extends Client {
@@ -72,10 +69,6 @@ module.exports = class BotClient extends Client {
     // Database
     this.database = schemas;
 
-    // Music Player (using Riffy + Lavalink - powerful, stable, supports all effects)
-    // DISABLED: Music feature disabled in config
-    // if (this.config.MUSIC.ENABLED) this.musicManager = riffyHandler(this);
-
     // Giveaways
     if (this.config.GIVEAWAYS.ENABLED) this.giveawaysManager = giveawaysHandler(this);
 
@@ -85,16 +78,7 @@ module.exports = class BotClient extends Client {
     // Interaction Router
     this.interactionRouter = new InteractionRouter(this);
 
-    // Party Manager - DISABLED: Party feature disabled
-    // this.partyManager = new PartyManager(this);
-
-    // Party Music Handler - DISABLED: Party feature disabled
-    // this.partyMusicHandler = new PartyMusicHandler(this);
-
-    // Party Interaction Router - DISABLED: Party feature disabled
-    // require("../handlers/partyInteractionRouter").init(this);
-    
-    // Advanced Processor System (High-Performance for 200+ servers)
+    // Advanced Processor System
     this.processors = new ProcessorManager(this);
   }
 

@@ -1,17 +1,20 @@
-const avatarInfo = require("../shared/avatar");
+const avatarInfo = require("./shared/avatar");
 
 /**
  * @type {import("@structures/Command")}
  */
 module.exports = {
   name: "avatar",
-  description: "shows a users avatar information",
+  description: "shows a user's avatar",
   category: "INFORMATION",
   botPermissions: ["EmbedLinks"],
   command: {
     enabled: true,
     usage: "[@member|id]",
     aliases: ["av", "profilepic"],
+  },
+  slashCommand: {
+    enabled: false,
   },
 
   async messageRun(message, args) {

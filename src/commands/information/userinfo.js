@@ -1,11 +1,11 @@
-const userInfo = require("../shared/user");
+const userInfo = require("./shared/user");
 
 /**
  * @type {import("@structures/Command")}
  */
 module.exports = {
   name: "userinfo",
-  description: "shows information about the user",
+  description: "shows information about a user",
   category: "INFORMATION",
   botPermissions: ["EmbedLinks"],
   command: {
@@ -13,17 +13,19 @@ module.exports = {
     usage: "[@member|id]",
     aliases: ["uinfo", "memberinfo"],
   },
+  slashCommand: {
+    enabled: false,
+  },
 
   async messageRun(message, args) {
-    let response;
     try {
       const target = args.length > 0 ? await message.guild.resolveMember(args[0]) : message.member;
-      response = target
+      const response = target
         ? userInfo(target)
-        : "It appears that the user is either invalid or not a member of this server.";
-    } catch (e) {
-      response = "It appears that the user is either invalid or not a member of this server.";
+        : "That user is either invalid or not a member of this server.";
+      await message.safeReply(response);
+    } catch {
+      await message.safeReply("That user is either invalid or not a member of this server.");
     }
-    await message.safeReply(response);
   },
 };

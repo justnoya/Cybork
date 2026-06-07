@@ -1,4 +1,4 @@
-const emojiInfo = require("../shared/emoji");
+const emojiInfo = require("./shared/emoji");
 
 /**
  * @type {import("@structures/Command")}
@@ -14,10 +14,12 @@ module.exports = {
     minArgsCount: 1,
     aliases: ["emote", "ei", "emoteinfo"],
   },
+  slashCommand: {
+    enabled: false,
+  },
 
   async messageRun(message, args) {
-    const emoji = args[0];
-    const response = emojiInfo(emoji);
+    const response = emojiInfo(args[0]);
     await message.safeReply(response);
   },
 };

@@ -1,4 +1,4 @@
-const channelInfo = require("../shared/channel");
+const channelInfo = require("./shared/channel");
 
 /**
  * @type {import("@structures/Command")}
@@ -13,16 +13,16 @@ module.exports = {
     usage: "[#channel|id]",
     aliases: ["chinfo", "ci", "channel"],
   },
+  slashCommand: {
+    enabled: false,
+  },
 
   async messageRun(message, args) {
     let targetChannel;
 
     if (message.mentions.channels.size > 0) {
       targetChannel = message.mentions.channels.first();
-    }
-
-    // find channel by name/ID
-    else if (args.length > 0) {
+    } else if (args.length > 0) {
       const search = args.join(" ");
       const tcByName = message.guild.findMatchingChannels(search);
       if (tcByName.length === 0) return message.safeReply(`No channels found matching \`${search}\`!`);

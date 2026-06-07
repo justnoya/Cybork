@@ -11,5 +11,4 @@ module.exports = {
   suggestionHandler: require("./suggestion"),
   ticketHandler: require("./ticket"),
   translationHandler: require("./translation"),
-  musicInteractionRouter: require("./musicInteractionRouter"),
 };
