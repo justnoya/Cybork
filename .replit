@@ -31,6 +31,7 @@ args = "node start.js"
 
 [agent]
 expertMode = true
+stack = "BEST_EFFORT_FALLBACK"
 
 [[ports]]
 localPort = 2010
