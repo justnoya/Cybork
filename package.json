@@ -43,6 +43,7 @@
     "ascii-table": "^0.0.9",
     "axios": "^1.13.6",
     "btoa": "^1.2.1",
+    "canvas": "^3.2.3",
     "cheerio": "^1.1.0",
     "common-tags": "^1.8.2",
     "connect-mongo": "^3.2.0",
@@ -77,13 +78,15 @@
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "riffy": "^1.0.12",
     "snakecord": "^1.0.9",
+    "soundcloud-scraper": "^5.0.3",
     "sourcebin_js": "^0.0.3-ignore",
     "string-progressbar": "^1.0.4",
     "table": "^6.9.0",
     "timestamp-to-date": "^1.1.0",
     "twemoji-parser": "^14.0.0",
     "undici": "^6.23.0",
-    "ws": "^8.13.0"
+    "ws": "^8.13.0",
+    "youtube-sr": "^4.3.12"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.9",

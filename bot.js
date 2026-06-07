@@ -1,6 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 
+// Polyfill File global for Node 18 (it's only a global in Node 20+)
+if (typeof globalThis.File === "undefined") {
+  globalThis.File = require("node:buffer").File;
+}
+
 require("module-alias/register");
 const moduleAlias = require("module-alias");
 moduleAlias.addAliases({
